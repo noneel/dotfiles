@@ -1,0 +1,9 @@
+[submodule "zsh/.config/zsh/ohmyzsh"]
+	path = zsh/.config/zsh/ohmyzsh
+	url = https://github.com/ohmyzsh/ohmyzsh
+[submodule "bash/.config/bash/oh-my-bash"]
+	path = bash/.config/bash/oh-my-bash
+	url = https://github.com/ohmybash/oh-my-bash
+[submodule "tmux/.config/tmux/tpm"]
+	path = tmux/.config/tmux/tpm
+	url = https://github.com/tmux-plugins/tpm
