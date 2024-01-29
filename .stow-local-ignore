@@ -3,6 +3,6 @@
 \.gitmodules
 \.gitignore
 \.DS_Store
-\*\.DS_Store
-\.config\.DS_Store
+\*/\.DS_Store
+\.config/\.DS_Store
 \README.md
