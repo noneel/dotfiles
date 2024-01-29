@@ -1,4 +1,8 @@
-README.md
-LICENSE.txt
-.git/
-.gitmodules
+\LICENSE
+\.git/
+\.gitmodules
+\.gitignore
+\.DS_Store
+\*\.DS_Store
+\.config\.DS_Store
+\README.md
