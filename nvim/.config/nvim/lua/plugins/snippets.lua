@@ -7,33 +7,23 @@ return {
   },
   {
     "L3MON4D3/LuaSnip",
-    keys = {
-      {
-        "<Tab>",
-        function()
-          if vim.snippet.locally_jumpable(1) then
-            vim.schedule(function()
-              vim.snippet.jump(1)
-            end)
-            return
-          end
-          return "<Tab>"
-        end,
-        expr = true,
-        silent = true,
-        mode = "i",
-      },
-    },
+    -- keys = {
+    --   {
+    --     "<Tab>",
+    --     function()
+    --       -- Override lazyvim config to use locally_jumpable instead of jumpable,
+    --       if vim.snippet.locally_jumpable(1) then
+    --         -- vim.schedule(function()
+    --         vim.snippet.jump(1)
+    --         -- end)
+    --         return
+    --       end
+    --       return "<Tab>"
+    --     end,
+    --     expr = true,
+    --     silent = true,
+    --     mode = "i",
+    --   },
+    -- },
   },
 }
-
--- return {
---   "L3MON4D3/LuaSnip",
---   keys = {
---     {
---       "<tab>",
---       false,
---       mode = "i",
---     },
---   },
--- }
