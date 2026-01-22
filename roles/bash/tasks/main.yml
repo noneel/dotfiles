@@ -8,34 +8,39 @@
   ansible.builtin.include_tasks: "{{ ansible_distribution }}.yml"
   when: distribution_config.stat.exists
 
+- name: "{{ role_name }} | Set config source"
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/override_utils/tasks/set_config_source.yml"
+  vars:
+    config_name: bash
+
 - name: "Bash | Copy .bashrc"
   ansible.builtin.copy:
-    src: ".bashrc"
+    src: "{{ _files_path }}/.bashrc"
     dest: "{{ ansible_user_dir }}/.bashrc"
     mode: "0644"
 
 - name: "Bash | Copy .profile"
   ansible.builtin.copy:
-    src: ".profile"
+    src: "{{ _files_path }}/.profile"
     dest: "{{ ansible_user_dir }}/.profile"
     mode: "0644"
 
 - name: "Bash | Copy custom bash config"
   ansible.builtin.copy:
     dest: "{{ ansible_user_dir }}/.config/"
-    src: "bash"
+    src: "{{ _files_path }}/bash"
     mode: "0644"
     directory_mode: "0755"
     force: true
 
 - name: "Bash | {{ ansible_distribution }} | Identify distribution config"
   ansible.builtin.stat:
-    path: "{{ role_path }}/files/os/{{ ansible_distribution }}"
+    path: "{{ _files_path }}/os/{{ ansible_distribution }}"
   register: bash_os_distribution_config
 
 - name: "Bash | {{ ansible_os_family }} | Identify os family config"
   ansible.builtin.stat:
-    path: "{{ role_path }}/files/os/{{ ansible_os_family }}"
+    path: "{{ _files_path }}/os/{{ ansible_os_family }}"
   register: bash_os_family_config
   when: not bash_os_distribution_config.stat.exists
 

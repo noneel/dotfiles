@@ -8,6 +8,11 @@
   ansible.builtin.include_tasks: "{{ ansible_distribution }}.yml"
   when: tmux_distribution_config.stat.exists
 
+- name: "Tmux | Set config source"
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/override_utils/tasks/set_config_source.yml"
+  vars:
+    config_name: tmux
+
 - name: "Tmux | Install TPM"
   ansible.builtin.git:
     repo: https://github.com/tmux-plugins/tpm
@@ -15,7 +20,7 @@
 
 - name: "Tmux | Configure tmux"
   ansible.builtin.copy:
-    src: tmux
+    src: "{{ _files_path }}/tmux"
     dest: "{{ ansible_user_dir }}/.config/"
     mode: "0644"
     directory_mode: "0755"

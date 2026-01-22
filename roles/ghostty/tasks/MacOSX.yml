@@ -7,6 +7,6 @@
 
 - name: "👻 Ghossty | Deploy Configuration"
   ansible.builtin.copy:
-    src: config
+    src: "{{ _files_path }}/config"
     dest: "~/Library/Application\ Support/com.mitchellh.ghostty/config"
     mode: "0600"

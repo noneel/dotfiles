@@ -1,0 +1,33 @@
+---
+# Reusable task for deploying config files with override support
+# Required vars:
+#   - config_name: name of the role/config (e.g., "neovim")
+#   - config_dest: destination path (e.g., "~/.config/nvim")
+
+- name: "{{ config_name }} | Check for override"
+  ansible.builtin.stat:
+    path: "{{ playbook_dir }}/overrides/{{ config_name }}/files"
+  register: _override_check
+
+- name: "{{ config_name }} | Set config source (override)"
+  ansible.builtin.set_fact:
+    _config_source: "{{ playbook_dir }}/overrides/{{ config_name }}/files"
+  when: _override_check.stat.exists
+
+- name: "{{ config_name }} | Set config source (default)"
+  ansible.builtin.set_fact:
+    _config_source: "{{ role_path }}/files"
+  when: not _override_check.stat.exists
+
+- name: "{{ config_name }} | Ensure config directory exists"
+  ansible.builtin.file:
+    mode: "0755"
+    path: "{{ config_dest }}"
+    state: directory
+
+- name: "{{ config_name }} | Deploy config ({{ 'override' if _override_check.stat.exists else 'default' }})"
+  ansible.builtin.file:
+    src: "{{ _config_source }}"
+    dest: "{{ config_dest }}"
+    state: link
+    force: true

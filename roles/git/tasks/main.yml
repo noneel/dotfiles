@@ -8,6 +8,11 @@
   ansible.builtin.include_tasks: "{{ ansible_distribution }}.yml"
   when: distribution_config.stat.exists
 
+- name: "{{ role_name }} | Set config source"
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/override_utils/tasks/set_config_source.yml"
+  vars:
+    config_name: git
+
 - name: "Git | Set diff.colorMoved"
   community.general.git_config:
     name: diff.colorMoved
@@ -149,7 +154,7 @@
 
 - name: "Git | Copy global.commit.template"
   ansible.builtin.copy:
-    src: global.commit.template
+    src: "{{ _files_path }}/global.commit.template"
     dest: "{{ ansible_user_dir }}/.config/git/commit_template"
     mode: "0644"
 

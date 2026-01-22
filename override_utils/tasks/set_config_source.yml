@@ -1,0 +1,27 @@
+---
+# Sets _files_path variable to override or default files directory
+# Required vars:
+#   - config_name: name of the role (e.g., "neovim", "bash")
+#
+# After including this, use {{ _files_path }}/ as the source for copy tasks
+
+- name: "{{ config_name }} | Check for override"
+  ansible.builtin.stat:
+    path: "{{ playbook_dir }}/overrides/{{ config_name }}/files"
+  register: _override_check
+
+- name: "{{ config_name }} | Set files path"
+  ansible.builtin.set_fact:
+    _files_path: "{{ playbook_dir }}/overrides/{{ config_name }}/files"
+    _using_override: true
+  when: _override_check.stat.exists
+
+- name: "{{ config_name }} | Set files path (default)"
+  ansible.builtin.set_fact:
+    _files_path: "{{ role_path }}/files"
+    _using_override: false
+  when: not _override_check.stat.exists
+
+- name: "{{ config_name }} | Using {{ 'override' if _using_override else 'default' }} config"
+  ansible.builtin.debug:
+    msg: "Config source: {{ _files_path }}"

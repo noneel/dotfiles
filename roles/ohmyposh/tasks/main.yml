@@ -8,10 +8,15 @@
   ansible.builtin.include_tasks: "{{ ansible_distribution }}.yml"
   when: distribution_config.stat.exists
 
+- name: "{{ role_name }} | Set config source"
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/override_utils/tasks/set_config_source.yml"
+  vars:
+    config_name: ohmyposh
+
 - name: "Oh-My-Posh | Copy custom theme"
   ansible.builtin.copy:
     dest: "{{ ansible_user_dir }}/.config/oh-my-posh"
-    src: "themes"
+    src: "{{ _files_path }}/themes"
     directory_mode: "0755"
     mode: "0644"
     force: true

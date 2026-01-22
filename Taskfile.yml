@@ -11,3 +11,35 @@ tasks:
       vault_secret: "{{.vault_secret}}"
     cmds:
       - docker build -t devbox:latest .
+
+  override:
+    desc: Create override from base role (e.g., task override -- neovim)
+    cmds:
+      - |
+        ROLE="{{.CLI_ARGS}}"
+        if [ -z "$ROLE" ]; then
+          echo "Usage: task override -- <role_name>"
+          echo ""
+          echo "Available roles with config files:"
+          ls -1 roles/*/files 2>/dev/null | cut -d'/' -f2 | sort -u
+          exit 1
+        fi
+        if [ -d "overrides/$ROLE" ]; then
+          echo "Override already exists: overrides/$ROLE"
+          echo "Edit it at: overrides/$ROLE/files/"
+          exit 1
+        fi
+        if [ ! -d "roles/$ROLE/files" ]; then
+          echo "Error: No files/ directory in roles/$ROLE"
+          echo ""
+          echo "Available roles with config files:"
+          ls -1 roles/*/files 2>/dev/null | cut -d'/' -f2 | sort -u
+          exit 1
+        fi
+        mkdir -p "overrides/$ROLE"
+        cp -r "roles/$ROLE/files" "overrides/$ROLE/"
+        echo "Created: overrides/$ROLE/files/"
+        echo ""
+        echo "Next steps:"
+        echo "  1. Edit your config in overrides/$ROLE/files/"
+        echo "  2. Deploy with: ./bin/dotfiles --tags $ROLE"
