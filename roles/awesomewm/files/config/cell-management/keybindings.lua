@@ -9,6 +9,31 @@ local user_config = require("cell-management.config")
 -- Forward declaration for modals (referenced before definition)
 local summon_modal, macro_modal
 
+local summon_trigger_keys = {
+  XF86Tools = true,
+  ["#191"] = true,
+  F13 = true,
+  Caps_Lock = true,
+}
+
+local function has_modifier(modifiers, target)
+  for _, modifier in ipairs(modifiers or {}) do
+    if modifier == target then
+      return true
+    end
+  end
+
+  return false
+end
+
+local function binding_key_for_event(modifiers, key)
+  if has_modifier(modifiers, "Shift") and type(key) == "string" and #key == 1 then
+    return key:upper()
+  end
+
+  return key
+end
+
 -- Simple same-class window cycling (no external dependencies)
 local function cycle_same_class()
   local focused = client.focus
@@ -43,17 +68,19 @@ local function cycle_same_class()
   next_client:raise()
 end
 
--- Initialize the F13 modal (summon_modal declared at top for double-tap logic)
--- Handles double-tap: if F13/CapsLock pressed while modal is open, switch to macro modal
+-- Initialize the summon modal (summon_modal declared at top for double-tap logic)
+-- Handles double-tap: if the summon trigger is pressed again while the modal is open,
+-- switch to the macro modal.
 summon_modal = awful.keygrabber {
   stop_key = 'Escape',
   stop_event = 'press',
   timeout = 1,  -- 1 second timeout for modal auto-close
   autostart = false,
   keypressed_callback = function(self, mod, key, event)
-    -- Double-tap detection: F13 pressed again while summon modal is open
-    -- This enables CapsLock double-tap on laptop keyboards to access macro modal
-    if key == "F13" or key == "Caps_Lock" then
+    local binding_key = binding_key_for_event(mod, key)
+
+    -- Treat any recognized summon trigger as a second tap to enter macro mode.
+    if summon_trigger_keys[key] then
       self:stop()
       gears.timer.delayed_call(function()
         if macro_modal then macro_modal:start() end
@@ -63,7 +90,7 @@ summon_modal = awful.keygrabber {
 
     -- Check if it's a summon key
     for app_name, app_cfg in pairs(apps) do
-      if app_cfg.summon == key then
+      if app_cfg.summon == binding_key then
         local app = app_name  -- Capture for closure
         self:stop()
         gears.timer.delayed_call(function()

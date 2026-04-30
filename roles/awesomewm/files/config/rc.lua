@@ -31,10 +31,40 @@ awful.spawn.once("xset r rate 300 40")
 
 -- Remap Caps Lock to F13 for laptop keyboard support
 -- This allows the summon modal (F13) to work on keyboards without F13 key
--- Must run in sequence: setxkbmap first (disables capslock), then xmodmap (remaps to F13)
+-- Must run in sequence: setxkbmap first (preserving the system XKB layout), then xmodmap
 -- Runs on every startup/reload to ensure remapping persists after any setxkbmap changes
 -- Small delay ensures X server is ready to accept the remapping
-awful.spawn.with_shell("sleep 0.2 && setxkbmap -option caps:none && xmodmap -e 'keycode 66 = F13'")
+awful.spawn.with_shell([[
+sleep 0.2
+
+layout="$(localectl status | awk -F': *' '/X11 Layout:/ {print $2}')"
+model="$(localectl status | awk -F': *' '/X11 Model:/ {print $2}')"
+variant="$(localectl status | awk -F': *' '/X11 Variant:/ {print $2}')"
+options="$(localectl status | awk -F': *' '/X11 Options:/ {print $2}')"
+
+if [ -z "$layout" ]; then layout="us"; fi
+if [ -z "$model" ]; then model="pc105"; fi
+
+case ",$options," in
+  *,caps:none,*)
+    ;;
+  *)
+    if [ -n "$options" ]; then
+      options="$options,caps:none"
+    else
+      options="caps:none"
+    fi
+    ;;
+esac
+
+if [ -n "$variant" ]; then
+  setxkbmap -model "$model" -layout "$layout" -variant "$variant" -option "$options"
+else
+  setxkbmap -model "$model" -layout "$layout" -option "$options"
+fi
+
+xmodmap -e 'keycode 66 = F13'
+]])
 
 -- Start clipboard manager daemon (CopyQ)
 awful.spawn.once("copyq")
@@ -137,35 +167,11 @@ else
   })
 end
 
-
-mylauncher = awful.widget.launcher({
-  image = beautiful.awesome_icon,
-  menu = mymainmenu
-})
-
 -- Menubar configuration
 menubar.utils.terminal = terminal -- Set the terminal for applications that require it
 -- }}}
 
 -- {{{ Wibar
--- Create taglist and tasklist button configurations
-local taglist_buttons = gears.table.join(
-  awful.button({}, 1, function(t) t:view_only() end),
-  awful.button({ modkey }, 1, function(t)
-    if client.focus then
-      client.focus:move_to_tag(t)
-    end
-  end),
-  awful.button({}, 3, awful.tag.viewtoggle),
-  awful.button({ modkey }, 3, function(t)
-    if client.focus then
-      client.focus:toggle_tag(t)
-    end
-  end),
-  awful.button({}, 4, function(t) awful.tag.viewnext(t.screen) end),
-  awful.button({}, 5, function(t) awful.tag.viewprev(t.screen) end)
-)
-
 local tasklist_buttons = gears.table.join(
   awful.button({}, 1, function(c)
     if c == client.focus then
@@ -188,6 +194,28 @@ local tasklist_buttons = gears.table.join(
     awful.client.focus.byidx(-1)
   end))
 
+local function screen_dpi_for_geometry(s)
+  local width = s.geometry.width or 0
+  local height = s.geometry.height or 0
+
+  if width >= 3000 or height >= 1800 then
+    return 144
+  end
+
+  if width >= 2500 or height >= 1400 then
+    return 120
+  end
+
+  return 96
+end
+
+local function configure_screen_metrics(s)
+  s.dpi = screen_dpi_for_geometry(s)
+  if s.mywibox then
+    s.mywibox.height = beautiful.xresources.apply_dpi(28, s)
+  end
+end
+
 local function set_wallpaper(s)
   -- Wallpaper
   if beautiful.wallpaper then
@@ -201,9 +229,14 @@ local function set_wallpaper(s)
 end
 
 -- Re-set wallpaper when a screen's geometry changes (e.g. different resolution)
-screen.connect_signal("property::geometry", set_wallpaper)
+screen.connect_signal("property::geometry", function(s)
+  configure_screen_metrics(s)
+  set_wallpaper(s)
+end)
 
 awful.screen.connect_for_each_screen(function(s)
+  configure_screen_metrics(s)
+
   -- Wallpaper
   set_wallpaper(s)
 
@@ -211,7 +244,7 @@ awful.screen.connect_for_each_screen(function(s)
   awful.tag({ "1", "2", "3", "4", "5", "6", "7", "8", "9" }, s, awful.layout.layouts[1])
 
   -- Create the modern wibar with all widgets
-  wibar_config.create_wibar(s, taglist_buttons, tasklist_buttons, mymainmenu)
+  wibar_config.create_wibar(s, tasklist_buttons, mymainmenu)
 end)
 -- }}}
 
@@ -241,7 +274,11 @@ globalkeys = gears.table.join(
     { description = "focus the next screen", group = "screen" }),
   awful.key({ modkey, "Control" }, "k", function() awful.screen.focus_relative(-1) end,
     { description = "focus the previous screen", group = "screen" }),
-  awful.key({ modkey, }, "u", awful.client.urgent.jumpto,
+  awful.key({ modkey, }, "u", function()
+      cell_management.layout_manager.bind_to_cell()
+    end,
+    { description = "bind focused window to cell", group = "layout" }),
+  awful.key({ modkey, "Shift" }, "u", awful.client.urgent.jumpto,
     { description = "jump to urgent client", group = "client" }),
   awful.key({ modkey, }, "Tab",
     function()
@@ -274,30 +311,30 @@ globalkeys = gears.table.join(
     end,
     { description = "restore minimized", group = "client" }),
 
-  -- Volume control keys using volume widget methods
+  -- Volume control keys routed through the active wibar controller
   awful.key({}, "XF86AudioRaiseVolume", function()
-    wibar_config.volume_widget:inc(5)
+    wibar_config.increase_volume(5)
   end, { description = "increase volume", group = "media" }),
 
   awful.key({}, "XF86AudioLowerVolume", function()
-    wibar_config.volume_widget:dec(5)
+    wibar_config.decrease_volume(5)
   end, { description = "decrease volume", group = "media" }),
 
   awful.key({}, "XF86AudioMute", function()
-    wibar_config.volume_widget:toggle()
+    wibar_config.toggle_volume()
   end, { description = "toggle mute", group = "media" }),
 
   awful.key({}, "XF86AudioMicMute", function()
     awful.spawn("pactl set-source-mute @DEFAULT_SOURCE@ toggle")
   end, { description = "toggle mic mute", group = "media" }),
 
-  -- Brightness control keys using brightness widget methods
+  -- Brightness control keys routed through the active wibar controller
   awful.key({}, "XF86MonBrightnessUp", function()
-    wibar_config.brightness_widget:inc()
+    wibar_config.increase_brightness()
   end, { description = "increase brightness", group = "media" }),
 
   awful.key({}, "XF86MonBrightnessDown", function()
-    wibar_config.brightness_widget:dec()
+    wibar_config.decrease_brightness()
   end, { description = "decrease brightness", group = "media" }),
 
   -- Media control keys
@@ -376,8 +413,14 @@ clientkeys = gears.table.join(
     { description = "toggle floating", group = "client" }),
   awful.key({ modkey, "Control" }, "Return", function(c) c:swap(awful.client.getmaster()) end,
     { description = "move to master", group = "client" }),
-  awful.key({ modkey, }, "o", function(c) c:move_to_screen() end,
-    { description = "move to screen", group = "client" }),
+  awful.key({ modkey, }, "o", function(c)
+      cell_management.layout_manager.move_client_to_next_screen(c, true)
+    end,
+    { description = "move to next screen", group = "client" }),
+  awful.key({ modkey, "Shift" }, "o", function(c)
+      cell_management.layout_manager.move_client_to_previous_screen(c, true)
+    end,
+    { description = "move to previous screen", group = "client" }),
   awful.key({ modkey, }, "t", function(c) c.ontop = not c.ontop end,
     { description = "toggle keep on top", group = "client" }),
   awful.key({ modkey, }, "h",
@@ -555,7 +598,7 @@ for app_name, config in pairs(apps) do
   table.insert(awful.rules.rules, {
     rule = { class = config.class },
     callback = function(c)
-      local layout = state.get_current_layout()
+      local layout = state.get_current_layout(c.screen)
       if layout and layout.apps[app_name] then
         helpers.position_client_in_cell(c, app_name, layout)
       end

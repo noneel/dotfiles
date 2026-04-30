@@ -11,6 +11,10 @@ return {
     id = 'Mattermost.Desktop',
     summon = 'c', -- [C]hat
   },
+  Signal      = {
+    id = 'org.whispersystems.signal-desktop',
+    summon = 'C', -- Signal chat
+  },
   Discord     = {
     id = 'com.hnc.Discord',
     summon = 'd', -- [D]iscord
@@ -23,9 +27,9 @@ return {
     id = 'com.apple.finder',
     summon = 'f', -- [F]inder
   },
-  Claude      = {
-    id = 'com.anthropic.claudefordesktop',
-    summon = 'g', -- [G]enAI (was GPT)
+  ChatGPT     = {
+    id = 'com.openai.chat',
+    summon = 'g', -- [G]enAI / ChatGPT
   },
   ScreenSharing = {
     id = 'com.apple.ScreenSharing',

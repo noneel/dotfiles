@@ -16,8 +16,8 @@
       - rofi               # Application launcher, layout picker
       - i3lock             # Screen locker
       - playerctl          # Media key controls (play/pause/next/prev)
-      - pulseaudio-utils   # Provides pactl for mic mute
-      - libasound2-plugins # ALSA pulse plugin for volume widget (amixer -D pulse)
+      - pulseaudio-utils   # Provides pactl for volume and mic controls
+      - libasound2-plugins # Pulse/PipeWire compatibility for ALSA apps
       - x11-xserver-utils  # Provides xset for keyboard repeat rate
       - flatpak            # Required for Discord, Spotify, Obsidian
       - papirus-icon-theme # Icon theme for UI
@@ -32,6 +32,7 @@
       - xfce4-power-manager # Power/battery/screen timeout settings
       - policykit-1-gnome  # Polkit auth agent for 1Password system auth
       - network-manager-gnome # nm-applet for WiFi systray widget
+      - jq                   # JSON parsing for AI usage monitor
     state: present
     update_cache: true
   become: true
@@ -97,42 +98,56 @@
     src: "{{ _files_path }}/config/cell-management/"
     dest: "{{ ansible_facts['user_dir'] }}/.config/awesome/cell-management/"
     mode: "0644"
+  notify: "awesomewm | Ubuntu | Restart AwesomeWM"
 
 - name: "awesomewm | Ubuntu | Deploy Notifications Config"
   ansible.builtin.copy:
     src: "{{ _files_path }}/config/notifications/"
     dest: "{{ ansible_facts['user_dir'] }}/.config/awesome/notifications/"
     mode: "0644"
+  notify: "awesomewm | Ubuntu | Restart AwesomeWM"
+
+- name: "awesomewm | Ubuntu | Deploy Widget Modules"
+  ansible.builtin.copy:
+    src: "config/widgets/"
+    dest: "{{ ansible_facts['user_dir'] }}/.config/awesome/widgets/"
+    mode: "0644"
+  notify: "awesomewm | Ubuntu | Restart AwesomeWM"
 
 - name: "awesomewm | Ubuntu | Deploy wibar configuration"
   ansible.builtin.copy:
     src: "{{ _files_path }}/config/wibar.lua"
     dest: "{{ ansible_facts['user_dir'] }}/.config/awesome/wibar.lua"
     mode: "0644"
+  notify: "awesomewm | Ubuntu | Restart AwesomeWM"
 
 - name: "awesomewm | Ubuntu | Deploy window switcher"
   ansible.builtin.copy:
     src: "{{ _files_path }}/config/window-switcher.lua"
     dest: "{{ ansible_facts['user_dir'] }}/.config/awesome/window-switcher.lua"
     mode: "0644"
+  notify: "awesomewm | Ubuntu | Restart AwesomeWM"
 
 - name: "awesomewm | Ubuntu | Deploy icon resolver"
   ansible.builtin.copy:
     src: "{{ _files_path }}/config/icon-resolver.lua"
     dest: "{{ ansible_facts['user_dir'] }}/.config/awesome/icon-resolver.lua"
     mode: "0644"
+  notify: "awesomewm | Ubuntu | Restart AwesomeWM"
 
 - name: "awesomewm | Ubuntu | Deploy Catppuccin Mocha Theme"
   ansible.builtin.copy:
     src: "{{ _files_path }}/config/themes/"
     dest: "{{ ansible_facts['user_dir'] }}/.config/awesome/themes/"
     mode: "0644"
+  notify: "awesomewm | Ubuntu | Restart AwesomeWM"
 
 - name: "awesomewm | Ubuntu | Deploy rc.lua"
   ansible.builtin.copy:
     src: "{{ _files_path }}/config/rc.lua"
     dest: "{{ ansible_facts['user_dir'] }}/.config/awesome/rc.lua"
     mode: "0644"
+  notify: "awesomewm | Ubuntu | Restart AwesomeWM"
 
 - name: "awesomewm | Ubuntu | Ensure rofi config directory exists"
   ansible.builtin.file:
@@ -244,4 +259,37 @@
     dest: "{{ ansible_facts['user_dir'] }}/.config/copyq/copyq-commands.ini"
     mode: "0644"
 
+- name: "awesomewm | Ubuntu | Copy AI usage monitor script"
+  ansible.builtin.copy:
+    src: scripts/ai-usage-monitor.sh
+    dest: "{{ ansible_facts['user_dir'] }}/.local/bin/ai-usage-monitor.sh"
+    mode: "0755"
+  notify: "awesomewm | Ubuntu | Restart AI usage monitor service"
 
+- name: "awesomewm | Ubuntu | Ensure systemd user directory exists"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['user_dir'] }}/.config/systemd/user"
+    state: directory
+    mode: "0755"
+
+- name: "awesomewm | Ubuntu | Copy AI usage monitor service"
+  ansible.builtin.copy:
+    src: systemd/ai-usage-monitor.service
+    dest: "{{ ansible_facts['user_dir'] }}/.config/systemd/user/ai-usage-monitor.service"
+    mode: "0644"
+  notify: "awesomewm | Ubuntu | Restart AI usage monitor service"
+
+- name: "awesomewm | Ubuntu | Copy AI usage widget module"
+  ansible.builtin.copy:
+    src: config/ai-usage-widget.lua
+    dest: "{{ ansible_facts['user_dir'] }}/.config/awesome/ai-usage-widget.lua"
+    mode: "0644"
+  notify: "awesomewm | Ubuntu | Restart AwesomeWM"
+
+- name: "awesomewm | Ubuntu | Enable and start AI usage monitor service"
+  ansible.builtin.systemd:
+    name: ai-usage-monitor.service
+    scope: user
+    state: started
+    enabled: true
+    daemon_reload: true

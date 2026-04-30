@@ -3,6 +3,140 @@
     "commit": "",
     "pr": ""
   },
+  "enabledPlugins": {
+    "gopls-lsp@claude-plugins-official": true,
+    "lua-lsp@claude-plugins-official": true,
+    "oh-my-claude": true,
+    "oh-my-claude@oh-my-claude": true,
+    "playwright@claude-plugins-official": true,
+    "plugin-dev@claude-plugins-official": true,
+    "pyright-lsp@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true
+  },
+  "env": {
+    "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "1",
+    "CLAUDE_CODE_API_KEY_HELPER_TTL_MS": "3600000",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "DISABLE_BUG_COMMAND": "1",
+    "DISABLE_ERROR_REPORTING": "1",
+    "DISABLE_TELEMETRY": "1",
+    "ENABLE_LSP_TOOLS": "1",
+    "MAX_THINKING_TOKENS": "31999",
+    "MCP_TIMEOUT": "30000",
+    "SLASH_COMMAND_TOOL_CHAR_BUDGET": "20000"
+  },
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/techdufus/.openmonitor/hook.sh Notification"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/techdufus/.openmonitor/hook.sh PostToolUse"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/techdufus/.openmonitor/hook.sh PostToolUseFailure"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/techdufus/.openmonitor/hook.sh PreToolUse"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/techdufus/.openmonitor/hook.sh SessionEnd"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/techdufus/.openmonitor/hook.sh SessionStart"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/techdufus/.openmonitor/hook.sh Stop"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/techdufus/.openmonitor/hook.sh SubagentStart"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/techdufus/.openmonitor/hook.sh SubagentStop"
+          }
+        ]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/techdufus/.openmonitor/hook.sh TaskCompleted"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/techdufus/.openmonitor/hook.sh UserPromptSubmit"
+          }
+        ]
+      }
+    ]
+  },
   "permissions": {
     "allow": [
       "WebFetch(domain:docs.anthropic.com)",
@@ -940,6 +1074,7 @@
       "Write(/tmp/**)",
       "Bash(*:/tmp/**)"
     ],
+    "defaultMode": "acceptEdits",
     "deny": [
       "Bash(sudo:*)",
       "Bash(su:*)",
@@ -978,66 +1113,68 @@
       "Write(./**/*.key)",
       "Bash(chmod:777:*)",
       "Bash(chown:root:*)"
-    ],
-    "defaultMode": "acceptEdits"
+    ]
   },
-  "hooks": {
-    "PreToolUse": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/claude-status-hook PreToolUse"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/claude-status-hook Stop"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/claude-status-hook SubagentStop"
-          }
-        ]
-      }
-    ],
-    "Notification": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/claude-status-hook Notification"
-          }
-        ]
-      }
+  "respectGitignore": true,
+  "spinnerVerbs": {
+    "mode": "replace",
+    "verbs": [
+      "Arising",
+      "Final flashing",
+      "Activating chakra",
+      "Summoning shadows",
+      "Shadow cloning",
+      "Unlocking sharingan",
+      "Expanding domain",
+      "Gathering cursed energy",
+      "Double striking",
+      "Believing it",
+      "Breaking limits",
+      "Going super saiyan",
+      "Assembling",
+      "Ascending",
+      "Going solo",
+      "Spirit bombing",
+      "Kamehamehaing",
+      "Finding sensu beans",
+      "Questing",
+      "Spending stats",
+      "Leveling up",
+      "Opening Secret Cow Level",
+      "Corrupting items",
+      "Crafting",
+      "Activating Horadric Cube",
+      "Releasing bankai",
+      "Initiating duel",
+      "Dedicating hearts",
+      "Charging Rasengan",
+      "Activating Chidori",
+      "Moon prism powering",
+      "Omae wa mou shindeiru-ing",
+      "Nani-ing intensely",
+      "Barrel rolling",
+      "Hadouken-ing",
+      "Fus Ro Dah-ing",
+      "Pressing F",
+      "Leroy Jenkins-ing",
+      "For the Horde-ing",
+      "Respawning",
+      "Collecting coins",
+      "Smashing",
+      "Fatality-ing",
+      "Toasty-ing",
+      "Achievement Unlocking",
+      "Critical hitting",
+      "Limit breaking",
+      "Summoning Shenron",
+      "Making a contract",
+      "GGing"
     ]
   },
   "statusLine": {
-    "type": "command",
-    "command": "~/.claude/scripts/statusline.sh"
+    "command": "~/.claude/scripts/statusline.sh",
+    "type": "command"
   },
-  "enabledPlugins": {
-    "oh-my-claude@oh-my-claude": true
-  },
-  "respectGitignore": true,
-  "syntaxHighlightingDisabled": false
-  "environmentVariables": {
-    "DISABLE_TELEMETRY": "1",
-    "DISABLE_ERROR_REPORTING": "1",
-    "DISABLE_BUG_COMMAND": "1",
-    "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "1",
-    "MCP_TIMEOUT": "30000",
-    "CLAUDE_CODE_API_KEY_HELPER_TTL_MS": "3600000"
-  }
+  "syntaxHighlightingDisabled": false,
+  "teammateMode": "in-process"
 }

@@ -57,12 +57,16 @@ graph TD
 | Keyboard Type | Summon Modal | Macro Modal |
 |---------------|--------------|-------------|
 | Laptop (no F13) | CapsLock | Double-tap CapsLock (150ms) |
-| External (with F13/F16) | F13 | F16 |
+| External (with F13/F16) | F13 | F16 or double-tap the same summon key |
+
+Some keyboards expose the summon key as `XF86Tools` or raw keycode `#191` instead of literal `F13`.
+AwesomeWM now treats those aliases as the same leader key for both summon activation and double-tap macro entry.
 
 **Default Summon Keys:**
 - `t` → Ghostty Terminal
 - `b` → Brave Browser
 - `d` → Discord
+- `Shift+c` → Signal
 - `s` → Spotify
 - `n` → Obsidian
 - `o` → 1Password
@@ -78,6 +82,7 @@ graph TD
 - `Hyper + p` → Layout picker
 - `Hyper + ;` → Cycle to next layout
 - `Hyper + u` → Bind focused window to cell
+- `Super/Command + u` → Bind focused window to cell directly
 
 ### Complete Desktop Environment
 
@@ -123,7 +128,7 @@ graph LR
 **Media & System:**
 - `playerctl` - Media key controls
 - `brightnessctl` - Brightness control
-- `pulseaudio-utils` - Audio controls
+- `pulseaudio-utils` - Audio controls via `pactl`
 
 **Settings Tools (No GNOME):**
 - `pavucontrol` - Audio/mic/speaker settings
@@ -280,6 +285,15 @@ Hyper + l
    },
    ```
 
+   Shifted summon keys are supported by using uppercase letters:
+   ```lua
+   Signal = {
+     class = "signal",
+     summon = "C",       -- CapsLock/F13 + Shift+c
+     exec = "flatpak run org.signal.Signal",
+   },
+   ```
+
 3. **Reload AwesomeWM:** Super + Ctrl + r
 
 #### Create a Custom Layout
@@ -299,6 +313,29 @@ Edit `~/.config/awesome/cell-management/layouts.lua`:
   },
 },
 ```
+
+#### Set a Layout Per Monitor
+
+Edit `~/.config/awesome/cell-management/config.lua`:
+
+```lua
+M.screen_layouts = {
+  ["DP-1"] = "4K Workspace",   -- Preferred: XRandR output name
+  ["HDMI-1"] = "HD Workspace",
+  ["screen:2"] = "Fullscreen", -- Fallback if output names are unstable
+  primary = "4K Workspace",    -- Optional default for the primary screen
+}
+
+M.systray_screen = "DP-1"      -- Optional systray target; defaults to "primary"
+```
+
+Notes:
+- Output-name keys are matched before `primary` and `screen:<index>`.
+- If no explicit mapping matches, Awesome falls back to resolution-based selection.
+- The systray target accepts the same output-name / `screen:<index>` style and falls back to the current primary screen if the configured target is unavailable.
+- `Hyper + p` and `Hyper + ;` now operate on the focused monitor only.
+- `Super + o` and `Super + Shift + o` move the focused client between monitors and re-snap it using the target monitor's active layout.
+- Use `xrandr --query` to find output names such as `DP-1`, `HDMI-1`, or `eDP-1`.
 
 #### Define Custom Cells
 
@@ -338,9 +375,9 @@ custom = {
 | Hyper + `j` | Focus window down |
 | Hyper + `k` | Focus window up |
 | Hyper + `l` | Focus window right |
-| Hyper + `p` | Open layout picker |
-| Hyper + `;` | Cycle to next layout |
-| Hyper + `u` | Bind window to cell |
+| Hyper + `p` | Open layout picker for focused monitor |
+| Hyper + `;` | Cycle layout on focused monitor |
+| Hyper + `u` | Bind window to a cell on its current monitor |
 
 ### Standard AwesomeWM
 
@@ -350,6 +387,8 @@ custom = {
 | Super + `r` | Run prompt |
 | Super + Ctrl + `r` | Reload AwesomeWM |
 | Super + Shift + `q` | Quit AwesomeWM |
+| Super + `o` | Move window to next monitor and snap to that monitor's layout |
+| Super + Shift + `o` | Move window to previous monitor and snap to that monitor's layout |
 | Super + `1-9` | Switch to workspace 1-9 |
 | Super + Shift + `1-9` | Move window to workspace |
 
@@ -510,10 +549,9 @@ sequenceDiagram
 ## Known Limitations
 
 **Version 1 Constraints:**
-- No layout persistence (state resets on restart)
+- Runtime layout picks are not persisted unless configured in `config.lua`
 - No visual modal feedback
 - No cell overlay for manual positioning
-- Single monitor only
 - Fixed 80x40 grid (not runtime configurable)
 - First window only (multi-window apps not fully supported)
 
@@ -521,7 +559,6 @@ sequenceDiagram
 
 ### Internal Documentation
 
-- **CLAUDE.md:** [roles/awesomewm/CLAUDE.md](CLAUDE.md)
 - **Hammerspoon Role:** [roles/hammerspoon](../hammerspoon/) (macOS inspiration)
 
 ### External Resources
@@ -539,7 +576,7 @@ When modifying this role:
 1. Test on Ubuntu 22.04+ before committing
 2. Verify configuration syntax: `awesome -k ~/.config/awesome/rc.lua`
 3. Document new features in this README
-4. Update CLAUDE.md with implementation details
+4. Document non-obvious landmines in the README only when they cannot be enforced in code
 5. Follow [conventional commit](https://www.conventionalcommits.org/) format
 
 ## License

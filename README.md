@@ -84,13 +84,13 @@ This means that you can run a role, and it will only run if your current OS is c
 This is accomplished with this `template` `main.yml` task in each role:
 ```yaml
 ---
-- name: "{{ role_name }} | Checking for Distribution Config: {{ ansible_distribution }}"
+- name: "{{ role_name }} | Checking for Distribution Config: {{ ansible_facts['distribution'] }}"
   ansible.builtin.stat:
-    path: "{{ role_path }}/tasks/{{ ansible_distribution }}.yml"
+    path: "{{ role_path }}/tasks/{{ ansible_facts['distribution'] }}.yml"
   register: distribution_config
 
-- name: "{{ role_name }} | Run Tasks: {{ ansible_distribution }}"
-  ansible.builtin.include_tasks: "{{ ansible_distribution }}.yml"
+- name: "{{ role_name }} | Run Tasks: {{ ansible_facts['distribution'] }}"
+  ansible.builtin.include_tasks: "{{ ansible_facts['distribution'] }}.yml"
   when: distribution_config.stat.exists
 ```
 The first task checks for the existence of a `roles/<target role>/tasks/<current_distro>.yml` file. If that file exists (example `current_distro:MacOSX` and a `MacOSX.yml` file exists) it will be run automatically. This keeps roles from breaking if you run a role that isn't yet supported or configured for the system you are running `dotfiles` on.
@@ -135,6 +135,7 @@ Below is a list of all available values. Not all are required but incorrect valu
 | ---------------- | -------------------------------------- | -------- |
 | git_user_name    | string                                 | yes      |
 | op               | object `(see OP Variable below)`       | yes      |
+| keyboard         | object `(Linux/X11 keyboard settings)` | no       |
 | go.packages      | list `(for extra go bin installs)`     | no       |
 | helm.repos       | list `(add extra helm repos)`          | no       |
 | k8s.repo.version | string `(specify kubectl bin version)` | no       |
