@@ -74,3 +74,12 @@ source = "/Users/mdegarmo/.codex/.tmp/bundled-marketplaces/openai-bundled"
 
 [memories]
 no_memories_if_mcp_or_web_search = true
+
+[projects."/home/raftdev/dotfiles"]
+trust_level = "trusted"
+
+[projects."/home/raftdev/development/rdp"]
+trust_level = "trusted"
+
+[projects."/home/raftdev/development/charts"]
+trust_level = "trusted"
