@@ -56,7 +56,7 @@ All configuration files are symlinked from this role to enable version control:
 ```
 ~/.claude/
 ├── settings.json         # Core settings (permissions, hooks, 900+ allowed operations)
-├── AGENTS.md            # Global user memory and project standards
+├── CLAUDE.md            # Global user memory and project standards
 ├── commands/            # 17 slash command definitions
 ├── skills/              # 3 built-in skills (git-commit-validator, workflow-router, skill-creator)
 ├── scripts/             # 11 GitHub workflow scripts (1,634 lines of shell)
@@ -164,7 +164,7 @@ claude
 ```
 ~/.claude/
 ├── settings.json      → Permissions, allowed domains, hooks config
-├── AGENTS.md          → Global user memory (standards, preferences)
+├── CLAUDE.md          → Global user memory (standards, preferences)
 ├── commands/          → Slash command definitions
 ├── skills/            → Reusable skill packages
 ├── scripts/           → Helper shell scripts
@@ -208,9 +208,9 @@ The `/work` command invokes the `workflow-router` skill, which analyzes tasks an
 ```bash
 /review-logs --days 30            # Analyze last 30 days
 # Identifies: repeated errors, user corrections, inefficiencies
-# Suggests: AGENTS.md additions to prevent recurrence
+# Suggests: CLAUDE.md additions to prevent recurrence
 
-/review-logs --apply              # Auto-append findings to AGENTS.md
+/review-logs --apply              # Auto-append findings to CLAUDE.md
 ```
 
 ---
@@ -223,7 +223,7 @@ The `/work` command invokes the `workflow-router` skill, which analyzes tasks an
 - **Comprehensive Bash allowlist** - Git, npm, docker, kubectl, terraform, etc.
 - **Security boundaries** - No sudo, restricted paths, no secrets access
 
-### Standards (`AGENTS.md`)
+### Standards (`CLAUDE.md`)
 
 ```markdown
 ## Git Behavior
@@ -289,6 +289,7 @@ ansible-playbook -t claude ~/.dotfiles/main.yml
 2. **Creates ~/.claude directory** if it doesn't exist
 3. **Symlinks configuration** from role files to `~/.claude/`:
    - `settings.json` (permissions, hooks, environment)
+   - `CLAUDE.md` (global user memory and project standards)
    - `commands/` (17 slash commands)
    - `scripts/` (11 workflow scripts)
    - `skills/` (3 built-in skills)

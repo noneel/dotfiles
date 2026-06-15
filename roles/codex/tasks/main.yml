@@ -8,6 +8,39 @@
   ansible.builtin.include_tasks: "{{ ansible_facts['distribution'] }}.yml"
   when: distribution_config.stat.exists
 
+- name: "{{ role_name }} | Check Codex asset override sources"
+  ansible.builtin.stat:
+    path: "{{ playbook_dir }}/overrides/roles/codex/files/{{ item }}"
+  loop:
+    - AGENTS.md
+    - config.toml
+    - agents
+    - skills
+  register: codex_asset_override_checks
+
+- name: "{{ role_name }} | Set Codex asset source paths"
+  ansible.builtin.set_fact:
+    codex_asset_sources: >-
+      {{
+        codex_asset_sources | default({}) | combine({
+          item.item: (
+            item.stat.exists
+            | ternary(
+              playbook_dir ~ '/overrides/roles/codex/files/' ~ item.item,
+              role_path ~ '/files/' ~ item.item
+            )
+          )
+        })
+      }}
+  loop: "{{ codex_asset_override_checks.results }}"
+
+- name: "{{ role_name }} | Apply Codex asset source paths"
+  ansible.builtin.set_fact:
+    codex_agents_source: "{{ codex_asset_sources['AGENTS.md'] }}"
+    codex_config_source: "{{ codex_asset_sources['config.toml'] }}"
+    codex_custom_agents_source: "{{ codex_asset_sources['agents'] }}"
+    codex_skills_source: "{{ codex_asset_sources['skills'] }}"
+
 - name: "{{ role_name }} | Configure | Ensure ~/.codex directory exists"
   ansible.builtin.file:
     path: "{{ ansible_facts['env']['HOME'] }}/.codex"

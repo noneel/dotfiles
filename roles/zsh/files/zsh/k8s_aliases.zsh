@@ -1,6 +1,7 @@
 #!/usr/bin/env zsh
 
 alias k=kubectl
+alias kctx='kubectl config use-context $(kubectl config get-contexts -o name | fzf)'
 alias kc='kubectl config use-context'
 alias kns='kubectl config set-context --current --namespace'
 alias kgns='kubectl get namespaces'
@@ -14,4 +15,3 @@ alias ktp='kubectl top pods'
 alias kexec='kubectl exec -it --'
 
 source <(kubectl completion zsh)
-
