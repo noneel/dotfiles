@@ -10,10 +10,34 @@
   ansible.builtin.include_tasks: "{{ ansible_facts['distribution'] }}.yml"
   when: distribution_config.stat.exists
 
-- name: "{{ role_name }} | Set config source"
-  ansible.builtin.include_tasks: "{{ playbook_dir }}/override_utils/tasks/set_config_source.yml"
-  vars:
-    config_name: claude
+- name: "{{ role_name }} | Check Claude asset override sources"
+  ansible.builtin.stat:
+    path: "{{ playbook_dir }}/overrides/roles/claude/files/{{ item }}"
+  loop:
+    - settings.json
+    - CLAUDE.md
+    - scripts
+    - commands
+    - hooks
+    - agents
+    - skills
+  register: claude_asset_override_checks
+
+- name: "{{ role_name }} | Set Claude asset source paths"
+  ansible.builtin.set_fact:
+    claude_asset_sources: >-
+      {{
+        claude_asset_sources | default({}) | combine({
+          item.item: (
+            item.stat.exists
+            | ternary(
+              playbook_dir ~ '/overrides/roles/claude/files/' ~ item.item,
+              role_path ~ '/files/' ~ item.item
+            )
+          )
+        })
+      }}
+  loop: "{{ claude_asset_override_checks.results }}"
 
 # Common Claude configuration for all operating systems
 - name: "{{ role_name }} | Ensure ~/.claude directory exists"
@@ -35,8 +59,26 @@
 
 - name: "{{ role_name }} | Create symlink to settings.json"
   ansible.builtin.file:
-    src: "{{ _files_path }}/settings.json"
+    src: "{{ claude_asset_sources['settings.json'] }}"
     dest: "{{ ansible_facts['env']['HOME'] }}/.claude/settings.json"
+    state: link
+    force: true
+
+- name: "{{ role_name }} | Check if CLAUDE.md exists and is not a symlink"
+  ansible.builtin.stat:
+    path: "{{ ansible_facts['env']['HOME'] }}/.claude/CLAUDE.md"
+  register: claude_memory_file
+
+- name: "{{ role_name }} | Remove existing CLAUDE.md if it's not a symlink"
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.claude/CLAUDE.md"
+    state: absent
+  when: claude_memory_file.stat.exists and not claude_memory_file.stat.islnk
+
+- name: "{{ role_name }} | Create symlink to CLAUDE.md"
+  ansible.builtin.file:
+    src: "{{ claude_asset_sources['CLAUDE.md'] }}"
+    dest: "{{ ansible_facts['env']['HOME'] }}/.claude/CLAUDE.md"
     state: link
     force: true
 
@@ -53,7 +95,7 @@
 
 - name: "{{ role_name }} | Create symlink to Claude scripts"
   ansible.builtin.file:
-    src: "{{ _files_path }}/scripts"
+    src: "{{ claude_asset_sources['scripts'] }}"
     dest: "{{ ansible_facts['env']['HOME'] }}/.claude/scripts"
     state: link
     force: true
@@ -71,7 +113,7 @@
 
 - name: "{{ role_name }} | Create symlink to Claude commands"
   ansible.builtin.file:
-    src: "{{ _files_path }}/commands"
+    src: "{{ claude_asset_sources['commands'] }}"
     dest: "{{ ansible_facts['env']['HOME'] }}/.claude/commands"
     state: link
     force: true
@@ -89,7 +131,7 @@
 
 - name: "{{ role_name }} | Create symlink to Claude hooks"
   ansible.builtin.file:
-    src: "{{ _files_path }}/hooks"
+    src: "{{ claude_asset_sources['hooks'] }}"
     dest: "{{ ansible_facts['env']['HOME'] }}/.claude/hooks"
     state: link
     force: true
@@ -107,7 +149,7 @@
 
 - name: "{{ role_name }} | Create symlink to Claude agents"
   ansible.builtin.file:
-    src: "{{ _files_path }}/agents"
+    src: "{{ claude_asset_sources['agents'] }}"
     dest: "{{ ansible_facts['env']['HOME'] }}/.claude/agents"
     state: link
     force: true
@@ -125,7 +167,7 @@
 
 - name: "{{ role_name }} | Create symlink to Claude skills"
   ansible.builtin.file:
-    src: "{{ _files_path }}/skills"
+    src: "{{ claude_asset_sources['skills'] }}"
     dest: "{{ ansible_facts['env']['HOME'] }}/.claude/skills"
     state: link
     force: true

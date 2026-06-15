@@ -1,5 +1,13 @@
 #!/usr/bin/env zsh
 
+function kgp() {
+  if [ -z "$1" ]; then
+    kubectl get po
+  else
+    kubectl get po | fzf --filter="$1"
+  fi
+}
+
 function kgnsonly() {
   kubectl get namespaces | awk 'NR!=1 {print $1}'
 }
@@ -123,6 +131,415 @@ function k.togglePromptInfo() {
     export SHOW_K8S_PROMPT_INFO="true"
     return
   fi
+}
+
+function select_pod() {
+  command -v fzf >/dev/null || {
+    echo "fzf is not installed."
+    return 1
+  }
+  command -v jq >/dev/null || {
+    echo "jq is not installed."
+    return 1
+  }
+
+  local search_term="$1"
+  local prioritize_active="$2"
+  local all_pods=""
+  local matching_pods=""
+  local selected_pod=""
+
+  if [ "$prioritize_active" = "true" ]; then
+    all_pods=$(kubectl get pods --no-headers | awk '{print $1, $3}' | sort -k2,2 -r)
+  else
+    all_pods=$(kubectl get pods --no-headers)
+  fi
+
+  if [ -z "$search_term" ]; then
+    selected_pod=$(echo "$all_pods" | fzf --height 40% --reverse | awk '{print $1}')
+    echo "$selected_pod"
+    return 0
+  fi
+
+  matching_pods=$(echo "$all_pods" | grep -i "$search_term")
+  local match_count
+  match_count=$(echo "$matching_pods" | grep -v "^$" | wc -l)
+
+  if [ "$match_count" -eq 1 ]; then
+    echo "$matching_pods" | awk '{print $1}' | tr -d '\n'
+    return 0
+  elif [ "$match_count" -gt 1 ]; then
+    echo "Found $match_count pods matching '$search_term'. Please select one:" >&2
+    selected_pod=$(echo "$matching_pods" | fzf --height 40% --reverse --query="$search_term" | awk '{print $1}')
+    echo "$selected_pod"
+    return 0
+  fi
+
+  echo "No exact matches for '$search_term'. Trying fuzzy search:" >&2
+  local fuzzy_matches
+  fuzzy_matches=$(echo "$all_pods" | fzf --filter="$search_term" | wc -l)
+
+  if [ "$fuzzy_matches" -eq 1 ]; then
+    local fuzzy_pod
+    fuzzy_pod=$(echo "$all_pods" | fzf --filter="$search_term" | awk '{print $1}')
+    echo "Found single fuzzy match: $fuzzy_pod" >&2
+    echo "$fuzzy_pod"
+    return 0
+  fi
+
+  echo "Select from all pods:" >&2
+  selected_pod=$(echo "$all_pods" | fzf --height 40% --reverse --query="$search_term" | awk '{print $1}')
+  echo "$selected_pod"
+}
+
+function kpl() {
+  local pod_name
+  pod_name=$(select_pod "$1" "true")
+  if [ -n "$pod_name" ]; then
+    echo "Getting logs for pod: $pod_name"
+    kubectl logs "$pod_name"
+  fi
+}
+
+function kpd() {
+  local pod_name
+  pod_name=$(select_pod "$1" "true")
+  if [ -n "$pod_name" ]; then
+    echo "Describing pod: $pod_name"
+    kubectl describe pod "$pod_name"
+  fi
+}
+
+function kpx() {
+  local pod_name
+  pod_name=$(select_pod "$1" "true")
+  if [ -n "$pod_name" ]; then
+    echo "Exec into pod: $pod_name"
+    local kcommand="/bin/sh"
+    if [ -n "$2" ]; then
+      kcommand="$2"
+    fi
+    kubectl exec -it "$pod_name" -- "$kcommand"
+  fi
+}
+
+function kpexec() {
+  kpx "$@"
+}
+
+function kpg() {
+  local pod_name
+  pod_name=$(select_pod "$1" "true")
+  if [ -n "$pod_name" ]; then
+    echo "$pod_name"
+  fi
+}
+
+function kpdel() {
+  command -v fzf >/dev/null || {
+    echo "fzf is not installed."
+    return 1
+  }
+
+  local search_term="$1"
+  local all_pods
+  local selected_pods
+
+  all_pods=$(kubectl get pods --no-headers | awk '{print $1, $3}' | sort -k2,2 -r)
+
+  if [ -z "$all_pods" ]; then
+    echo "No pods found in current namespace."
+    return 1
+  fi
+
+  if [ -z "$search_term" ]; then
+    selected_pods=$(echo "$all_pods" | fzf --multi --height 40% --reverse \
+      --header="Select pods to delete (Tab to select, Enter to confirm)" | awk '{print $1}')
+  else
+    local matching_pods
+    matching_pods=$(echo "$all_pods" | grep -i "$search_term")
+
+    if [ -z "$matching_pods" ]; then
+      matching_pods=$(echo "$all_pods" | fzf --filter="$search_term")
+    fi
+
+    if [ -z "$matching_pods" ]; then
+      echo "No pods matching '$search_term' found."
+      return 1
+    fi
+
+    local match_count
+    match_count=$(echo "$matching_pods" | grep -v "^$" | wc -l)
+
+    if [ "$match_count" -eq 1 ]; then
+      selected_pods=$(echo "$matching_pods" | awk '{print $1}')
+    else
+      selected_pods=$(echo "$matching_pods" | fzf --multi --height 40% --reverse \
+        --query="$search_term" \
+        --header="Select pods to delete (Tab to select, Enter to confirm)" | awk '{print $1}')
+    fi
+  fi
+
+  if [ -z "$selected_pods" ]; then
+    echo "No pods selected. Aborting."
+    return 0
+  fi
+
+  local pod_count
+  pod_count=$(echo "$selected_pods" | grep -v "^$" | wc -l)
+
+  echo ""
+  echo -e "\033[1;33mThe following $pod_count pod(s) will be deleted:\033[0m"
+  echo ""
+  echo "$selected_pods" | while read -r pod; do
+    echo -e "  \033[0;31m-\033[0m $pod"
+  done
+  echo ""
+
+  echo -n -e "\033[1;33mAre you sure you want to delete these pods? [y/N]: \033[0m"
+  read -r confirm
+
+  if [[ "$confirm" =~ ^[Yy]$ ]]; then
+    echo ""
+    echo "$selected_pods" | while read -r pod; do
+      if [ -n "$pod" ]; then
+        echo -e "\033[0;36mDeleting pod:\033[0m $pod"
+        kubectl delete pod "$pod"
+      fi
+    done
+    echo ""
+    echo -e "\033[0;32mDone.\033[0m"
+  else
+    echo "Aborted."
+    return 0
+  fi
+}
+
+function kgetall {
+  local RED='\033[0;31m'
+  local GREEN='\033[0;32m'
+  local YELLOW='\033[1;33m'
+  local BLUE='\033[0;34m'
+  local MAGENTA='\033[0;35m'
+  local CYAN='\033[0;36m'
+  local WHITE='\033[1;37m'
+  local NC='\033[0m'
+  local BOLD='\033[1m'
+  local DIM='\033[2m'
+
+  local namespace=""
+  local grep_pattern=""
+  local use_fuzzy=false
+  local fuzzy_pattern=""
+
+  show_usage() {
+    echo -e "${BOLD}${WHITE}Usage: kgetall [OPTIONS]${NC}"
+    echo -e "${WHITE}  -n, --namespace <namespace>    Specify namespace${NC}"
+    echo -e "${WHITE}  -g, --grep <pattern>           Grep filter on resource items${NC}"
+    echo -e "${WHITE}  -f, --fuzzy [pattern]          Use fzf for fuzzy search (interactive if no pattern)${NC}"
+    echo -e "${WHITE}  -h, --help                     Show this help${NC}"
+    echo
+    echo -e "${WHITE}Examples:${NC}"
+    echo -e "${DIM}  kgetall -n kube-system${NC}"
+    echo -e "${DIM}  kgetall -g \"nginx\"${NC}"
+    echo -e "${DIM}  kgetall -f \"pod\"${NC}"
+    echo -e "${DIM}  kgetall -n default -g \"app=web\"${NC}"
+    echo -e "${DIM}  kgetall --fuzzy          # Interactive fuzzy search${NC}"
+  }
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+    -n | --namespace)
+      namespace="$2"
+      shift 2
+      ;;
+    -g | --grep)
+      grep_pattern="$2"
+      shift 2
+      ;;
+    -f | --fuzzy)
+      use_fuzzy=true
+      if [[ $# -gt 1 ]] && [[ ! "$2" =~ ^- ]]; then
+        fuzzy_pattern="$2"
+        shift 2
+      else
+        shift
+      fi
+      ;;
+    -h | --help)
+      show_usage
+      return 0
+      ;;
+    *)
+      if [[ -z "$namespace" ]] && [[ ! "$1" =~ ^- ]]; then
+        namespace="$1"
+        shift
+      else
+        echo -e "${RED}Unknown option: $1${NC}" >&2
+        show_usage
+        return 1
+      fi
+      ;;
+    esac
+  done
+
+  if $use_fuzzy && ! command -v fzf &>/dev/null; then
+    echo -e "${RED}Error: fzf is not installed. Please install fzf for fuzzy search functionality.${NC}" >&2
+    return 1
+  fi
+
+  filter_output() {
+    local output="$1"
+    local resource_name="$2"
+
+    if [[ -z "$output" ]] || [[ "$(echo "$output" | wc -l)" -le 1 ]]; then
+      return 1
+    fi
+
+    local filtered_output=""
+    local header_line=""
+    local has_matches=false
+
+    header_line=$(echo "$output" | head -n1)
+
+    if [[ -n "$grep_pattern" ]]; then
+      local data_lines=$(echo "$output" | tail -n +2 | grep -i "$grep_pattern")
+      if [[ -n "$data_lines" ]]; then
+        filtered_output=$(echo -e "$header_line\n$data_lines")
+        has_matches=true
+      fi
+    elif $use_fuzzy; then
+      if [[ -n "$fuzzy_pattern" ]]; then
+        local data_lines=$(echo "$output" | tail -n +2 | fzf -f "$fuzzy_pattern")
+        if [[ -n "$data_lines" ]]; then
+          filtered_output=$(echo -e "$header_line\n$data_lines")
+          has_matches=true
+        fi
+      else
+        local temp_file=$(mktemp)
+        echo "$output" | tail -n +2 >"$temp_file"
+        if [[ -s "$temp_file" ]]; then
+          echo -e "${DIM}${YELLOW}-> Press Enter to fuzzy search ${resource_name} (Ctrl+C to skip)${NC}" >&2
+          local selected_lines=$(cat "$temp_file" | fzf --multi --header="Select ${resource_name} items (Tab to select multiple, Enter to confirm)")
+          if [[ -n "$selected_lines" ]]; then
+            filtered_output=$(echo -e "$header_line\n$selected_lines")
+            has_matches=true
+          fi
+        fi
+        rm -f "$temp_file"
+      fi
+    else
+      filtered_output="$output"
+      has_matches=true
+    fi
+
+    if $has_matches; then
+      echo "$filtered_output"
+      return 0
+    fi
+
+    return 1
+  }
+
+  echo -e "${BOLD}${CYAN}========================================${NC}"
+  local header_text="Kubectl Get All Resources"
+  if [[ -n "$namespace" ]]; then
+    header_text+=" (Namespace: ${YELLOW}$namespace${WHITE})"
+  else
+    header_text+=" (All Namespaces)"
+  fi
+
+  if [[ -n "$grep_pattern" ]]; then
+    header_text+=" [Grep: ${GREEN}$grep_pattern${WHITE}]"
+  elif $use_fuzzy; then
+    if [[ -n "$fuzzy_pattern" ]]; then
+      header_text+=" [Fuzzy: ${GREEN}$fuzzy_pattern${WHITE}]"
+    else
+      header_text+=" [Interactive Fuzzy Search]"
+    fi
+  fi
+
+  echo -e "${BOLD}${WHITE}$header_text${NC}"
+  echo -e "${BOLD}${CYAN}========================================${NC}"
+  echo
+
+  local resource_count=0
+  local resources_with_items=0
+  local filtered_resources=0
+
+  for i in $(kubectl api-resources --verbs=list --namespaced -o name | grep -v "events.events.k8s.io" | grep -v "events" | sort | uniq); do
+    resource_count=$((resource_count + 1))
+
+    local output=""
+    if [[ -n "$namespace" ]]; then
+      output=$(kubectl -n "$namespace" get --ignore-not-found "$i" 2>/dev/null)
+    else
+      output=$(kubectl get --ignore-not-found "$i" 2>/dev/null)
+    fi
+
+    if [[ -n "$output" ]] && [[ "$(echo "$output" | wc -l)" -gt 1 ]]; then
+      resources_with_items=$((resources_with_items + 1))
+
+      local filtered_output=""
+      if filtered_output=$(filter_output "$output" "$i"); then
+        filtered_resources=$((filtered_resources + 1))
+
+        echo -e "${BOLD}${MAGENTA}+ Resource: ${GREEN}${i}${NC}"
+        echo -e "${DIM}${CYAN}|${NC}"
+
+        echo "$filtered_output" | while IFS= read -r line; do
+          if [[ "$line" =~ ^NAME[[:space:]] ]] || [[ "$line" =~ ^NAMESPACE[[:space:]] ]]; then
+            echo -e "${DIM}${CYAN}|${NC} ${BOLD}${BLUE}${line}${NC}"
+          else
+            echo -e "${DIM}${CYAN}|${NC} ${line}"
+          fi
+        done
+
+        echo -e "${DIM}${CYAN}+-${NC}"
+        echo
+      fi
+    fi
+  done
+
+  echo -e "${BOLD}${CYAN}========================================${NC}"
+  echo -e "${BOLD}${WHITE}Summary:${NC}"
+  echo -e "${WHITE}  Total resource types checked: ${GREEN}${resource_count}${NC}"
+  echo -e "${WHITE}  Resource types with items: ${GREEN}${resources_with_items}${NC}"
+
+  if [[ -n "$grep_pattern" ]] || $use_fuzzy; then
+    echo -e "${WHITE}  Resource types after filtering: ${GREEN}${filtered_resources}${NC}"
+  fi
+
+  if [[ -n "$namespace" ]]; then
+    echo -e "${WHITE}  Scope: ${YELLOW}Namespace '$namespace'${NC}"
+  else
+    echo -e "${WHITE}  Scope: ${YELLOW}All namespaces${NC}"
+  fi
+
+  if [[ -n "$grep_pattern" ]]; then
+    echo -e "${WHITE}  Filter: ${GREEN}grep '$grep_pattern'${NC}"
+  elif $use_fuzzy; then
+    if [[ -n "$fuzzy_pattern" ]]; then
+      echo -e "${WHITE}  Filter: ${GREEN}fuzzy '$fuzzy_pattern'${NC}"
+    else
+      echo -e "${WHITE}  Filter: ${GREEN}interactive fuzzy search${NC}"
+    fi
+  fi
+
+  echo -e "${BOLD}${CYAN}========================================${NC}"
+}
+
+function kpatchall {
+  local pods
+  pods=$(kubectl get pods -o json | jq -r '.items[] | select(.status.phase == "Pending" and ((.spec.tolerations == null) or (.spec.tolerations | length == 0) or (.spec.tolerations | map(select(.key == "raft")) | length == 0))) | .metadata.name')
+
+  for pod in $pods; do
+    kubectl patch pod "$pod" --patch '{"spec": {"tolerations": [{"key": "core", "operator": "Exists", "effect": "NoSchedule"}]}}'
+  done
+}
+
+function watchpo() {
+  watch -n 2 "kubectl get po | fzf --filter='$1' | head -20"
 }
 
 function __k_import_context_complete() {
