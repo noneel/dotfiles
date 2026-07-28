@@ -1,0 +1,15 @@
+---
+- name: "Git overrides | Checking for Distribution Config: {{ ansible_facts['distribution'] }}"
+  ansible.builtin.stat:
+    path: "{{ role_path }}/tasks/{{ ansible_facts['distribution'] }}.yml"
+  register: git_overrides_distribution_config
+
+- name: "Git overrides | Run Tasks: {{ ansible_facts['distribution'] }}"
+  ansible.builtin.include_tasks: "{{ ansible_facts['distribution'] }}.yml"
+  when: git_overrides_distribution_config.stat.exists
+
+- name: "Git overrides | Set loc alias"
+  community.general.git_config:
+    name: alias.loc
+    scope: global
+    value: "diff HEAD --shortstat"

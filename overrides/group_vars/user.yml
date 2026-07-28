@@ -25,7 +25,9 @@ default_roles:
   - fzf
   # - gh
   - git
+  - git_overrides
   - go
+  - herdr
   # - hammerspoon
   - helm
   # - k8s
@@ -43,6 +45,7 @@ default_roles:
   - nvm
   # - obsidian
   # - ohmyposh
+  - omp
   # - podman
   # - pwsh
   - python

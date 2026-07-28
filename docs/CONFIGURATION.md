@@ -145,7 +145,7 @@ Everything else is configured by editing the actual config files directly:
 | plasma summon | `roles/plasma/files/kwin/plasma-summon/`, `roles/plasma/files/summon/` |
 | plasma summon service | `roles/plasma/files/bin/plasma-summon-service.py`, `roles/plasma/files/systemd/plasma-summon.service` |
 
-The Herdr role copies the entire canonical `roles/herdr/files/config.toml` to `~/.config/herdr/config.toml`; edit the tracked source rather than the live output.
+The Herdr role copies `roles/herdr/files/config.toml`, or `overrides/roles/herdr/files/config.toml` when present, to `~/.config/herdr/config.toml`; edit the tracked source rather than the live output.
 
 Plasma owns a normal KDE session, stable desktop KConfig preferences in
 `plasma_desktop_kconfig_settings`, and a KWin script for the same summon,

@@ -8,6 +8,11 @@
   ansible.builtin.include_tasks: "{{ ansible_facts['distribution'] }}.yml"
   when: herdr_distribution_config.stat.exists
 
+- name: "Herdr | Set config source"
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/override_utils/tasks/set_config_source.yml"
+  vars:
+    config_name: herdr
+
 - name: "Herdr | Ensure Herdr config directory exists"
   ansible.builtin.file:
     path: "{{ ansible_facts['user_dir'] }}/.config/herdr"
@@ -17,5 +22,5 @@
 - name: "Herdr | Copy config"
   ansible.builtin.copy:
     dest: "{{ ansible_facts['user_dir'] }}/.config/herdr/config.toml"
-    src: "config.toml"
+    src: "{{ _files_path }}/config.toml"
     mode: "0644"

@@ -95,24 +95,39 @@ class HerdrRoleTests(unittest.TestCase):
         self.assertEqual(keys["focus_agent"], "prefix+alt+1..9")
 
     def test_main_dispatches_distribution_before_deploying_managed_config(self) -> None:
-        dispatch = self._task_with_action(
-            self.main_tasks, "ansible.builtin.include_tasks"
+        include_tasks = [
+            task
+            for task in self.main_tasks
+            if re.search(r"(?m)^  ansible\.builtin\.include_tasks:", task)
+        ]
+        dispatch = next(
+            task
+            for task in include_tasks
+            if "\"{{ ansible_facts['distribution'] }}.yml\"" in task
+        )
+        config_source = next(
+            task
+            for task in include_tasks
+            if "override_utils/tasks/set_config_source.yml" in task
         )
         copy = self._task_with_action(self.main_tasks, "ansible.builtin.copy")
 
+        self.assertEqual(len(include_tasks), 2)
         self.assertIn(
             "  ansible.builtin.include_tasks: "
             "\"{{ ansible_facts['distribution'] }}.yml\"",
             dispatch,
         )
+        self.assertIn("    config_name: herdr", config_source)
         self.assertLess(self.main_tasks.index(dispatch), self.main_tasks.index(copy))
+        self.assertLess(self.main_tasks.index(config_source), self.main_tasks.index(copy))
         self.assertIn("  ansible.builtin.copy:", copy)
         self.assertIn(
             "    dest: "
             "\"{{ ansible_facts['user_dir'] }}/.config/herdr/config.toml\"",
             copy,
         )
-        self.assertIn('    src: "config.toml"', copy)
+        self.assertIn('    src: "{{ _files_path }}/config.toml"', copy)
         self.assertIn('    mode: "0644"', copy)
 
     def test_macos_installs_stable_homebrew_formula(self) -> None:
