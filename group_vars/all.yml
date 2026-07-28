@@ -1,28 +1,42 @@
+arch_pacman_extra_args: "--disable-download-timeout"
+arch_pacman_update_cache_extra_args: "--disable-download-timeout"
+arch_pacman_upgrade_extra_args: "--disable-download-timeout"
+
 default_roles:
   - system
-  # - 1password
+  - 1password
   - aldente
   - asciiquarium
   - awesomewm
+  - vicinae
   - bash
   - bat
   - borders
   - btop
+  - brave
   - bun
   - claude
+  - codex
+  - herdr
+  - ollama
+  - omp
   # - docker
   - flatpak
   - fonts
   - fzf
   - gh
+  - discord
   - ghostty
+  - plasma
   - git
+  - worktrunk
   - go
   - hammerspoon
   - helm
   - jj
   - k8s
   - k9s
+  - lfk
   - kitty
   - lazygit
   - lsd
@@ -34,16 +48,19 @@ default_roles:
   - nerdfetch
   - nvm  # Must run before npm
   - npm
+  - clawpatch
   - obsidian
   - opencode
   - podman
-  - pwsh
+  # - pwsh
   - python
   - raycast
   # - ruby
   # - rust
+  - signal
   - slides
   - spotify
+  - superwhisper
   - ssh
   - sshfs
   - starship
@@ -57,19 +74,56 @@ default_roles:
   - zoxide
   - zsh
 
+
+exclude_roles_by_distribution:
+  Archlinux:
+    - asciiquarium
+    - bash
+    - aldente
+    - awesomewm
+    - borders
+    - hammerspoon
+    - ollama
+    - nala
+    - raycast
+    - slides
+    - superwhisper
+    - vicinae
+    - flatpak
+    - starship
+
 git_user_name: "TechDufus"
+
+keyboard:
+  model: pc105
+  layout: us
+  variant: dvorak
+  options:
+    - caps:none
+
 op:
   git:
     user:
       email: "op://Personal/GitHub/email"
     allowed_signers: "op://Personal/TechDufus SSH/allowed_signers"
+  fonts:
+    berkeley_mono:
+      vault: "Private"
+      item: "BerkeleyMono Fonts"
+      files:
+        - field: BerkeleyMonoNerdFont-Regular
+          filename: BerkeleyMonoNerdFont-Regular.otf
+        - field: BerkeleyMonoNerdFont-Italic
+          filename: BerkeleyMonoNerdFont-Italic.otf
+        - field: BerkeleyMonoNerdFont-Bold
+          filename: BerkeleyMonoNerdFont-Bold.otf
+        - field: BerkeleyMonoNerdFont-BoldItalic
+          filename: BerkeleyMonoNerdFont-BoldItalic.otf
   ssh:
     github:
       techdufus:
         - name: id_ed25519
           vault_path: "op://Personal/TechDufus SSH"
-        - name: raft-infra
-          vault_path: "op://Raft/Raft-SSH"
 # FIXME: See `system/tasks/main.yml` for how to structure this var looping.
   # system:
   #   hosts:

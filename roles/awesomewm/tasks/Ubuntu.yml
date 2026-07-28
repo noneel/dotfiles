@@ -11,19 +11,18 @@
       - thunar             # Lightweight file manager
       - tumbler            # Thumbnail service for Thunar
       - ristretto          # Lightweight image viewer (Xfce)
-      - curl               # For bemoji installation
-      - xclip              # Clipboard tool for bemoji and other apps
-      - rofi               # Application launcher, layout picker
+      - curl               # AI usage monitor HTTP client
+      - xclip              # General X11 clipboard CLI
+      - rofi               # Layout and cell picker menu
       - i3lock             # Screen locker
       - playerctl          # Media key controls (play/pause/next/prev)
-      - pulseaudio-utils   # Provides pactl for mic mute
-      - libasound2-plugins # ALSA pulse plugin for volume widget (amixer -D pulse)
+      - pulseaudio-utils   # Provides pactl for volume and mic controls
+      - libasound2-plugins # Pulse/PipeWire compatibility for ALSA apps
       - x11-xserver-utils  # Provides xset for keyboard repeat rate
       - flatpak            # Required for Discord, Spotify, Obsidian
       - papirus-icon-theme # Icon theme for UI
       - procps             # Provides top, free for widgets
       - iproute2           # Provides ip command for network widgets
-      - copyq              # Clipboard manager (Super + v)
       # Standalone settings tools (no GNOME deps)
       - pavucontrol        # Audio/mic/speaker settings
       - arandr             # Display/monitor layout
@@ -32,9 +31,36 @@
       - xfce4-power-manager # Power/battery/screen timeout settings
       - policykit-1-gnome  # Polkit auth agent for 1Password system auth
       - network-manager-gnome # nm-applet for WiFi systray widget
+      - jq                   # JSON parsing for AI usage monitor
+      - power-profiles-daemon # powerprofilesctl for battery profile switching
     state: present
     update_cache: true
   become: true
+
+- name: "awesomewm | Ubuntu | Stop legacy CopyQ process"
+  ansible.builtin.command:
+    argv:
+      - copyq
+      - exit
+  changed_when: false
+  failed_when: false
+  when: awesomewm_remove_legacy_launcher_tools | bool
+
+- name: "awesomewm | Ubuntu | Remove legacy launcher packages"
+  ansible.builtin.apt:
+    name: "{{ awesomewm_legacy_launcher_packages }}"
+    state: absent
+  become: true
+  when:
+    - awesomewm_remove_legacy_launcher_tools | bool
+    - awesomewm_legacy_launcher_packages | length > 0
+
+- name: "awesomewm | Ubuntu | Remove legacy launcher managed files"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ awesomewm_legacy_launcher_paths }}"
+  when: awesomewm_remove_legacy_launcher_tools | bool
 
 - name: "awesomewm | Ubuntu | Add user to video group for backlight control"
   ansible.builtin.user:
@@ -48,29 +74,6 @@
     name: upower
     state: present
   become: true
-
-- name: "awesomewm | Ubuntu | Install bemoji emoji picker"
-  ansible.builtin.get_url:
-    url: https://raw.githubusercontent.com/marty-oehme/bemoji/main/bemoji
-    dest: "{{ ansible_facts['user_dir'] }}/.local/bin/bemoji"
-    mode: "0755"
-
-- name: "awesomewm | Ubuntu | Download bemoji emoji database"
-  ansible.builtin.shell: |
-    {{ ansible_facts['user_dir'] }}/.local/bin/bemoji -D all
-  args:
-    creates: "{{ ansible_facts['user_dir'] }}/.local/share/bemoji/emojis.txt"
-  become: false
-  changed_when: true
-  # bemoji -D outputs to stderr and returns exit code 1 even on success
-  failed_when: false
-
-- name: "awesomewm | Ubuntu | Download Flare launcher"
-  ansible.builtin.get_url:
-    url: https://github.com/ByteAtATime/flare/releases/download/v0.1.0/flare_0.1.0_amd64.AppImage
-    dest: "{{ ansible_facts['user_dir'] }}/.local/bin/flare"
-    mode: "0755"
-  register: flare_download
 
 - name: "awesomewm | Ubuntu | Ensure ~/.config/awesome exists"
   ansible.builtin.file:
@@ -97,42 +100,63 @@
     src: "{{ _files_path }}/config/cell-management/"
     dest: "{{ ansible_facts['user_dir'] }}/.config/awesome/cell-management/"
     mode: "0644"
+  notify: "awesomewm | Ubuntu | Restart AwesomeWM"
 
 - name: "awesomewm | Ubuntu | Deploy Notifications Config"
   ansible.builtin.copy:
     src: "{{ _files_path }}/config/notifications/"
     dest: "{{ ansible_facts['user_dir'] }}/.config/awesome/notifications/"
     mode: "0644"
+  notify: "awesomewm | Ubuntu | Restart AwesomeWM"
+
+- name: "awesomewm | Ubuntu | Deploy Widget Modules"
+  ansible.builtin.copy:
+    src: "config/widgets/"
+    dest: "{{ ansible_facts['user_dir'] }}/.config/awesome/widgets/"
+    mode: "0644"
+  notify: "awesomewm | Ubuntu | Restart AwesomeWM"
 
 - name: "awesomewm | Ubuntu | Deploy wibar configuration"
   ansible.builtin.copy:
     src: "{{ _files_path }}/config/wibar.lua"
     dest: "{{ ansible_facts['user_dir'] }}/.config/awesome/wibar.lua"
     mode: "0644"
+  notify: "awesomewm | Ubuntu | Restart AwesomeWM"
 
 - name: "awesomewm | Ubuntu | Deploy window switcher"
   ansible.builtin.copy:
     src: "{{ _files_path }}/config/window-switcher.lua"
     dest: "{{ ansible_facts['user_dir'] }}/.config/awesome/window-switcher.lua"
     mode: "0644"
+  notify: "awesomewm | Ubuntu | Restart AwesomeWM"
 
 - name: "awesomewm | Ubuntu | Deploy icon resolver"
   ansible.builtin.copy:
     src: "{{ _files_path }}/config/icon-resolver.lua"
     dest: "{{ ansible_facts['user_dir'] }}/.config/awesome/icon-resolver.lua"
     mode: "0644"
+  notify: "awesomewm | Ubuntu | Restart AwesomeWM"
 
 - name: "awesomewm | Ubuntu | Deploy Catppuccin Mocha Theme"
   ansible.builtin.copy:
     src: "{{ _files_path }}/config/themes/"
     dest: "{{ ansible_facts['user_dir'] }}/.config/awesome/themes/"
     mode: "0644"
+  notify: "awesomewm | Ubuntu | Restart AwesomeWM"
+
+- name: "awesomewm | Ubuntu | Deploy CapsLock to F13 remap script"
+  ansible.builtin.copy:
+    src: "scripts/remap-caps-to-f13.sh"
+    dest: "{{ ansible_facts['user_dir'] }}/.local/bin/remap-caps-to-f13.sh"
+    mode: "0755"
+  notify: "awesomewm | Ubuntu | Restart AwesomeWM"
 
 - name: "awesomewm | Ubuntu | Deploy rc.lua"
   ansible.builtin.copy:
     src: "{{ _files_path }}/config/rc.lua"
     dest: "{{ ansible_facts['user_dir'] }}/.config/awesome/rc.lua"
     mode: "0644"
+  notify: "awesomewm | Ubuntu | Restart AwesomeWM"
 
 - name: "awesomewm | Ubuntu | Ensure rofi config directory exists"
   ansible.builtin.file:
@@ -226,22 +250,37 @@
     dest: "{{ ansible_facts['user_dir'] }}/.config/flameshot/flameshot.ini"
     mode: "0644"
 
-- name: "awesomewm | Ubuntu | Ensure CopyQ config directory exists"
+- name: "awesomewm | Ubuntu | Copy AI usage monitor script"
+  ansible.builtin.copy:
+    src: scripts/ai-usage-monitor.sh
+    dest: "{{ ansible_facts['user_dir'] }}/.local/bin/ai-usage-monitor.sh"
+    mode: "0755"
+  notify: "awesomewm | Ubuntu | Restart AI usage monitor service"
+
+- name: "awesomewm | Ubuntu | Ensure systemd user directory exists"
   ansible.builtin.file:
-    path: "{{ ansible_facts['user_dir'] }}/.config/copyq"
+    path: "{{ ansible_facts['user_dir'] }}/.config/systemd/user"
     state: directory
     mode: "0755"
 
-- name: "awesomewm | Ubuntu | Deploy CopyQ configuration"
+- name: "awesomewm | Ubuntu | Copy AI usage monitor service"
   ansible.builtin.copy:
-    src: "{{ _files_path }}/copyq/copyq.conf"
-    dest: "{{ ansible_facts['user_dir'] }}/.config/copyq/copyq.conf"
+    src: systemd/ai-usage-monitor.service
+    dest: "{{ ansible_facts['user_dir'] }}/.config/systemd/user/ai-usage-monitor.service"
     mode: "0644"
+  notify: "awesomewm | Ubuntu | Restart AI usage monitor service"
 
-- name: "awesomewm | Ubuntu | Deploy CopyQ commands"
+- name: "awesomewm | Ubuntu | Copy AI usage widget module"
   ansible.builtin.copy:
-    src: "{{ _files_path }}/copyq/copyq-commands.ini"
-    dest: "{{ ansible_facts['user_dir'] }}/.config/copyq/copyq-commands.ini"
+    src: config/ai-usage-widget.lua
+    dest: "{{ ansible_facts['user_dir'] }}/.config/awesome/ai-usage-widget.lua"
     mode: "0644"
+  notify: "awesomewm | Ubuntu | Restart AwesomeWM"
 
-
+- name: "awesomewm | Ubuntu | Enable and start AI usage monitor service"
+  ansible.builtin.systemd:
+    name: ai-usage-monitor.service
+    scope: user
+    state: started
+    enabled: true
+    daemon_reload: true

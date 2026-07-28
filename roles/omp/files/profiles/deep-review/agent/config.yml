@@ -1,0 +1,84 @@
+---
+modelRoles:
+  default: openai-codex/gpt-5.6-terra:xhigh
+  smol: openai-codex/gpt-5.6-luna:xhigh
+  task: openai-codex/gpt-5.6-terra:xhigh
+  slow: openai-codex/gpt-5.6-terra:xhigh
+  plan: openai-codex/gpt-5.6-terra:xhigh
+  designer: openai-codex/gpt-5.6-terra:xhigh
+  vision: openai-codex/gpt-5.6-terra:xhigh
+  commit: openai-codex/gpt-5.6-luna:xhigh
+  advisor: openai-codex/gpt-5.6-sol:low
+cycleOrder:
+  - smol
+  - default
+theme:
+  dark: dark-catppuccin
+symbolPreset: nerd
+display:
+  shimmer: kitt
+defaultThinkingLevel: xhigh
+advisor:
+  enabled: true
+  subagents: true
+  syncBacklog: "1"
+compaction:
+  thresholdPercent: 65
+hideThinkingBlock: true
+disabledProviders:
+  - claude
+  - claude-plugins
+  - codex
+  - opencode
+  - cursor
+  - cline
+  - gemini
+  - windsurf
+  - vscode
+  - github
+  - amazon-bedrock
+marketplace:
+  autoUpdate: auto
+bashInterceptor:
+  enabled: true
+edit:
+  streamingAbort: true
+lsp:
+  diagnosticsOnEdit: true
+collapseChangelog: true
+memory:
+  backend: mnemopi
+mnemopi:
+  scoping: per-project-tagged
+  proactiveLinking: true
+github:
+  enabled: true
+inspect_image:
+  enabled: true
+task:
+  eager: always
+  showResolvedModelBadge: true
+  enableLsp: true
+  isolation:
+    mode: auto
+skills:
+  enableCodexUser: false
+  enableClaudeUser: false
+  enableClaudeProject: false
+commands:
+  enableClaudeUser: false
+  enableClaudeProject: false
+  enableOpencodeUser: false
+  enableOpencodeProject: false
+mcp:
+  enableProjectConfig: false
+setupVersion: 1
+vault:
+  enabled: true
+dev:
+  autoqa:
+    consent: granted
+tier:
+  openai: default
+browser:
+  headless: false

@@ -15,11 +15,11 @@ This role transforms your Git environment into a professional, secure, and effic
 ## Supported Platforms
 
 | Platform | Package Manager | Delta Support | Status |
-|----------|----------------|---------------|--------|
-| macOS | Homebrew | ✅ Yes | ✅ Full |
-| Ubuntu/Debian | APT | ❌ No | ✅ Full |
-| Fedora/RHEL | DNF | ❌ No | ✅ Full |
-| Arch Linux | Pacman | ❌ No | ✅ Full |
+|----------|-----------------|---------------|--------|
+| macOS | Homebrew | Yes | Full |
+| Ubuntu/Debian | APT | No | Full |
+| Fedora/RHEL | DNF | No | Full |
+| Arch Linux | Pacman | No | Full |
 
 ## What Gets Installed
 
@@ -141,7 +141,7 @@ git br     # Formatted branch list with dates and authors
 flowchart TD
     A[Start Git Role] --> B{OS Detected?}
     B -->|macOS| C[Install git + git-delta via Homebrew]
-    B -->|Ubuntu| D[Install git via APT]
+    B -->|Ubuntu/Debian| D[Install git via APT]
     B -->|Fedora| E[Install git via DNF]
     B -->|Arch| F[Install git via Pacman]
 
@@ -190,7 +190,7 @@ flowchart TD
 ### Prerequisites
 - **SSH key pair** - Must exist at `~/.ssh/id_ed25519` (not created by this role)
 - **1Password CLI** (optional) - For secure credential management
-- **Sudo access** (Linux) - For package installation (graceful fallback if unavailable)
+- **Sudo access (Linux) or package-install permission** - Required for system package installation.
 
 ### Variable Requirements
 

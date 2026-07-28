@@ -1,0 +1,112 @@
+modelRoles: 
+  default: openai-codex/gpt-5.6-sol:xhigh
+  smol: openai-codex/gpt-5.6-luna:xhigh
+  task: openai-codex/gpt-5.6-sol:medium
+  slow: openai-codex/gpt-5.6-sol:xhigh
+  plan: openai-codex/gpt-5.6-sol:xhigh
+  designer: openai-codex/gpt-5.6-sol:medium
+  vision: openai-codex/gpt-5.6-terra:high
+  commit: openai-codex/gpt-5.6-luna:xhigh
+  advisor: openai-codex/gpt-5.6-sol:low
+cycleOrder: 
+  - smol
+  - default
+theme: 
+  dark: dark-catppuccin
+symbolPreset: nerd
+display: 
+  shimmer: kitt
+defaultThinkingLevel: xhigh
+advisor: 
+  enabled: true
+  syncBacklog: "3"
+  immuneTurns: 5
+compaction: 
+  thresholdPercent: 65
+hideThinkingBlock: true
+disabledProviders: 
+  - claude
+  - claude-plugins
+  - codex
+  - opencode
+  - cursor
+  - cline
+  - gemini
+  - windsurf
+  - vscode
+  - github
+  - amazon-bedrock
+marketplace: 
+  autoUpdate: auto
+bashInterceptor: 
+  enabled: true
+edit: 
+  streamingAbort: true
+lsp: 
+  diagnosticsOnEdit: true
+collapseChangelog: true
+memory: 
+  backend: mnemopi
+mnemopi: 
+  scoping: per-project-tagged
+  proactiveLinking: true
+  enhancedRecall: true
+github: 
+  enabled: true
+inspect_image: 
+  enabled: true
+task: 
+  eager: always
+  showResolvedModelBadge: true
+  enableLsp: true
+  isolation: 
+    mode: auto
+    commits: ai
+skills: 
+  enableCodexUser: false
+  enableClaudeUser: false
+  enableClaudeProject: false
+commands: 
+  enableClaudeUser: false
+  enableClaudeProject: false
+  enableOpencodeUser: false
+  enableOpencodeProject: false
+mcp: 
+  enableProjectConfig: false
+setupVersion: 1
+vault: 
+  enabled: true
+dev: 
+  autoqaConsent: granted
+tier: 
+  openai: default
+statusLine: 
+  transparent: true
+  compactThinkingLevel: true
+startup: 
+  showSplash: true
+  quiet: true
+autolearn: 
+  enabled: true
+  autoContinue: true
+readLineNumbers: true
+bash: 
+  autoBackground: 
+    enabled: true
+eval: 
+  rb: true
+  jl: true
+todo: 
+  eager: preferred
+secrets: 
+  enabled: true
+terminal: 
+  showProgress: true
+tui: 
+  tight: true
+  scrollbackRebuild: true
+snapcompact: 
+  systemPrompt: all
+  toolResults: true
+features: 
+  unexpectedStopDetection: true

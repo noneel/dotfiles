@@ -5,14 +5,46 @@
 lilHyper = { 'cmd', 'alt', 'ctrl' }             -- or D+F 🤘
 Hyper = { 'shift', 'cmd', 'alt', 'ctrl' } -- or S+D+F 😅
 
-hs.loadSpoon('ReloadConfiguration'):start()
+-- Bound time spent in individual application Accessibility calls.
+hs.window.timeout(0.5)
+
+local function reloadConfig(files)
+  local shouldReload = false
+
+  for _, file in ipairs(files) do
+    if file:match('%.lua$') then
+      shouldReload = true
+      break
+    end
+  end
+
+  if shouldReload then
+    hs.reload()
+  end
+end
+
+local configDir = os.getenv('HOME') .. '/.hammerspoon/'
+local configFiles = {
+  'apps.lua',
+  'chain.lua',
+  'helpers.lua',
+  'init.lua',
+  'layouts.lua',
+  'positions.lua',
+  'screen_layouts.lua',
+}
+
+configWatchers = {}
+for _, file in ipairs(configFiles) do
+  configWatchers[file] = hs.pathwatcher.new(configDir .. file, reloadConfig):start()
+end
 
 require('helpers')
 
 positions = require('positions')
 apps  = require('apps')
-layouts = require('layouts')
-summon = require('summon')
+local layouts = require('layouts')
+local screenLayouts = require('screen_layouts')
 chain = require('chain')
 
 --------------------------------------------------------------------------------
@@ -21,7 +53,7 @@ chain = require('chain')
 -- F16 to open macros modal (created first so summon modal can reference it)
 
 local macros = {
-  s = function() hs.eventtap.keyStroke({ 'cmd', 'shift' }, '4') end,  -- screenshot
+  s = function() hs.eventtap.keyStroke({ 'cmd', 'ctrl', 'shift' }, '4') end,  -- screenshot to clipboard
   e = function() hs.eventtap.keyStroke({ 'cmd', 'ctrl' }, 'space') end, -- emoji picker
   a = function() hs.eventtap.keyStroke({ 'cmd' }, '`') end,           -- next window of focused app
   -- c = function() hs.eventtap.keyStroke({ 'cmd', 'ctrl' }, 'c') end,   -- color picker app
@@ -31,7 +63,9 @@ local macros = {
   g = function() hs.eventtap.keyStroke(Hyper, 'g') end, -- gif search (raycast)
 }
 
-local macroModal = registerModalBindings(nil, 'f16', macros, true)
+local macroModal = registerTransientLeader(nil, 'f16', macros, {
+  timeoutSeconds = 1,
+})
 
 --------------------------------------------------------------------------------
 -- Summon Specific Apps
@@ -44,57 +78,92 @@ local summonModalBindings = tableFlip(hs.fnutils.map(apps, function(app)
   return app.summon
 end))
 
-local summonModal = registerModalBindings(nil, 'f13', hs.fnutils.map(summonModalBindings, function(app)
-  return function() summon(app) end
-end), true)
-
--- Double-tap detection: F13 pressed while summon modal is open -> switch to macro modal
-summonModal:bind('', 'f13', function()
-  summonModal:exit()
-  macroModal:enter()
-end)
-
 --------------------------------------------------------------------------------
--- Multi Window Management
+-- Window Management
 --------------------------------------------------------------------------------
--- hjkl  focus window west/south/north/east
--- a     unide [a]ll application windows
--- p     [p]ick layout
--- m     [m]aximize window
--- n     [n]ext window in current cell, like `n/p` in vim
--- u     warp [u]nder another window cell
--- ;     toggle alternate layout
+-- a     unhide [a]ll application windows
+-- p     [p]ick layout for focused screen
+-- ;     toggle alternate layout variant on focused screen
+-- '     reset focused screen layout overrides
+-- cmd+u bind focused window to a cell on the active screen
+-- cmd+o move focused window to next screen
+-- cmd+O move focused window to previous screen
 
 hs.window.animationDuration = 0
+-- Zen's non-standard window frame is offset by Hammerspoon's frame-correction workaround.
+hs.window.setFrameCorrectness = false
 
 local layout = hs.loadSpoon('GridLayout')
     :start()
-    :setLayouts(layouts)
     :setApps(apps)
     :setGrid(positions.full_grid)
     :setMargins('5x5')
 
-if (hs.screen.primaryScreen():name() ~= 'Built-in Retina Display') then
-  layout:selectLayout(1)
+local workspaceManager = hs.loadSpoon('WorkspaceManager')
+    :start({
+      layoutEngine = layout,
+      apps = apps,
+      layouts = layouts,
+      screenLayouts = screenLayouts,
+    })
+    :apply()
+
+local function summonApp(appName)
+  local app = apps[appName]
+  if app.launchOnly then
+    hs.task.new('/usr/bin/open', nil, { '-b', app.id }):start()
+    return
+  end
+
+  workspaceManager:summon(appName)
+end
+
+local summonModal = registerTransientLeader(nil, 'f13', hs.fnutils.map(summonModalBindings, function(appName)
+  return function() summonApp(appName) end
+end), {
+  timeoutSeconds = 1,
+})
+
+function macroModal:onEnter()
+  summonModal:exit()
+end
+
+function summonModal:onEnter()
+  macroModal:exit()
+end
+
+-- Double-tap detection: F13 pressed while summon modal is open -> switch to macro modal
+function summonModal:onRepeat()
+  macroModal:enter()
 end
 
 local windowManagementBindings = {
-  ['h'] = function() hs.window.focusedWindow():focusWindowWest(nil, true) end,
-  ['j'] = function() hs.window.focusedWindow():focusWindowSouth(nil, true) end,
-  ['k'] = function() hs.window.focusedWindow():focusWindowNorth(nil, true) end,
-  ['l'] = function() hs.window.focusedWindow():focusWindowEast(nil, true) end,
   ['a'] = function() hs.application.frontmostApplication():focus() end,
-  ['p'] = layout.selectLayout,
-  ['u'] = layout.bindToCell,
-  [';'] = layout.selectNextVariant,
-  ["'"] = layout.resetLayout,
-  -- ['m'] = toggleMaximized, -- Re-implement in GridLayout?
-  -- ['n'] = focusNextCellWindow, -- Re-implement in GridLayout?
+  ['p'] = function() workspaceManager:showLayoutPicker() end,
+  [';'] = function() workspaceManager:selectNextVariant() end,
+  ["'"] = function() workspaceManager:resetLayout() end,
 }
 
 registerKeyBindings(Hyper, hs.fnutils.map(windowManagementBindings, function(fn)
   return function() fn() end
 end))
+
+registerKeyBindings(lilHyper, {
+  ['o'] = function() workspaceManager:moveFocusedWindowToNextScreen() end,
+})
+
+registerKeyBindings(Hyper, {
+  ['o'] = function() workspaceManager:moveFocusedWindowToPreviousScreen() end,
+})
+
+registerKeyBindings({ 'cmd' }, {
+  ['u'] = function() workspaceManager:bindFocusedWindowToCell() end,
+  ['o'] = function() workspaceManager:moveFocusedWindowToNextScreen() end,
+})
+
+registerKeyBindings({ 'shift', 'cmd' }, {
+  ['o'] = function() workspaceManager:moveFocusedWindowToPreviousScreen() end,
+})
 
 
 -- --------------------------------------------------------------------------------

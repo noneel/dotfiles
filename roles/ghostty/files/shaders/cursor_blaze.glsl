@@ -70,10 +70,10 @@ vec2 getRectangleCenter(vec4 rectangle) {
     return vec2(rectangle.x + (rectangle.z / 2.), rectangle.y - (rectangle.w / 2.));
 }
 
-const vec4 TRAIL_COLOR = vec4(0.0, 0.878, 1.0, 1.0); // Electric Cyan
+const vec4 TRAIL_COLOR = vec4(0.533, 0.224, 0.937, 1.0); // Deep Catppuccin Mauve (#8839ef)
 const vec4 CURRENT_CURSOR_COLOR = TRAIL_COLOR;
 const vec4 PREVIOUS_CURSOR_COLOR = TRAIL_COLOR;
-const vec4 TRAIL_COLOR_ACCENT = vec4(0.0, 1.0, 0.941, 1.0); // Bright Aqua accent
+const vec4 TRAIL_COLOR_ACCENT = TRAIL_COLOR; // Keep the blaze effect deep purple throughout
 const float DURATION = .2;
 const float OPACITY = .8;
 
@@ -112,7 +112,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     vec2 centerCP = getRectangleCenter(previousCursor);
     float lineLength = distance(centerCC, centerCP);
     float distanceToEnd = distance(vu.xy, centerCC);
-    float alphaModifier = distanceToEnd / (lineLength * (easedProgress));
+    float alphaModifier = distanceToEnd / max(lineLength * easedProgress, 1e-6);
 
     if (alphaModifier > 1.0) { // this change fixed it for me.
       alphaModifier = 1.0;
@@ -121,7 +121,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     float sdfCursor = getSdfRectangle(vu, currentCursor.xy - (currentCursor.zw * offsetFactor), currentCursor.zw * 0.5);
     float sdfTrail = getSdfParallelogram(vu, v0, v1, v2, v3);
 
-    newColor = mix(newColor, TRAIL_COLOR_ACCENT, 1.0 - smoothstep(sdfTrail, -0.01, 0.001));
+    newColor = mix(newColor, TRAIL_COLOR_ACCENT, 1.0 - smoothstep(-0.01, 0.001, sdfTrail));
     newColor = mix(newColor, TRAIL_COLOR, antialising(sdfTrail));
 
     newColor = mix(fragColor, newColor, 1.0 - alphaModifier);

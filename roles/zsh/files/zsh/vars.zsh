@@ -76,16 +76,14 @@ export RIGHT_ANGLE="${GREEN}\xE2\x88\x9F${NC}"
 
 export GH_DASH_CONFIG="$HOME/.config/gh-dash/config.yaml"
 
-export DF_HOME="$HOME/dev/raft/data-fabric"
-export RDP_HOME="$HOME/dev/raft/rdp"
-export DF_INFRA_HOME="$HOME/dev/raft/df-infra"
-export DFDEV_GIT_PROTOCOL="ssh"
-export AWS_PROFILE="Raft"
-
 # User
 export DOTFILES="$HOME/.dotfiles"
 export GOBIN="$HOME/.local/bin"
 export BIN="$HOME/.local/bin"
+
+# OpenTelemetry defaults (secret endpoint/headers are loaded via vars.secret)
+export OTEL_EXPORTER_OTLP_PROTOCOL="http/json"
+export OTEL_EXPORTER_OTLP_LOGS_PROTOCOL="http/json"
 
 # Corporate security policies restrict /tmp access - use user-controlled location
 if [[ ! -d "$HOME/tmp/tmux" ]]; then
@@ -96,7 +94,7 @@ export TMUX_TMPDIR="$HOME/tmp/tmux"
 # Claude
 export CLAUDE_HOME="$HOME/.claude"
 export CLAUDE_SETTINGS="$CLAUDE_HOME/settings.json"
-export CLAUDE_MEMORY="$CLAUDE_HOME/CLAUDE.md"
+export CLAUDE_MEMORY="$CLAUDE_HOME/AGENTS.md"
 
 # Additional color codes for formatting
 export DIM="$CAT_OVERLAY0"
@@ -109,4 +107,3 @@ export BOX_TOP="╔════════════════════�
 export BOX_MID="║"
 export BOX_BOT="╚══════════════════════════════════════════════════════════╝"
 export DIVIDER="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-

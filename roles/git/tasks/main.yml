@@ -1,11 +1,20 @@
 ---
+- name: "{{ role_name }} | Select Distribution Tasks: {{ ansible_facts['distribution'] }}"
+  ansible.builtin.set_fact:
+    git_distribution_tasks_file: >-
+      {{
+        'Ubuntu.yml'
+        if ansible_facts['distribution'] == 'Debian'
+        else ansible_facts['distribution'] ~ '.yml'
+      }}
+
 - name: "{{ role_name }} | Checking for Distribution Config: {{ ansible_facts['distribution'] }}"
   ansible.builtin.stat:
-    path: "{{ role_path }}/tasks/{{ ansible_facts['distribution'] }}.yml"
+    path: "{{ role_path }}/tasks/{{ git_distribution_tasks_file }}"
   register: distribution_config
 
 - name: "{{ role_name }} | Run Tasks: {{ ansible_facts['distribution'] }}"
-  ansible.builtin.include_tasks: "{{ ansible_facts['distribution'] }}.yml"
+  ansible.builtin.include_tasks: "{{ git_distribution_tasks_file }}"
   when: distribution_config.stat.exists
 
 - name: "Git | Set color.ui"
@@ -64,7 +73,7 @@
     value: true
 
 - name: "Git | Read user.email secret from 1Password"
-  when: op_installed
+  when: op_authenticated | default(false)
   block:
     - name: "1Password | Get user.email"
       ansible.builtin.command: "op --account my.1password.com read '{{ op.git.user.email }}'"
@@ -79,16 +88,12 @@
       no_log: true
       when: op_git_user_email.rc == 0
 
-    - name: "1Password | Warning when not authenticated"
-      ansible.builtin.debug:
-        msg:
-          - "⚠️  1Password CLI is installed but not authenticated."
-          - ""
-          - "To fix this, run:"
-          - "eval $(op signin)"
-          - ""
-          - "Then run dotfiles again. For now, skipping 1Password integration."
-      when: op_git_user_email.rc != 0
+- name: "Git | Warning - 1Password not authenticated"
+  ansible.builtin.debug:
+    msg: "Git secret sync skipped because 1Password is installed but not authenticated. Unlock 1Password, then rerun dotfiles -t 1password,git."
+  when:
+    - op_installed | default(false)
+    - not (op_authenticated | default(false))
 
 - name: "Git | Set user.email"
   community.general.git_config:
@@ -96,7 +101,7 @@
     scope: global
     value: "{{ git_user_email }}"
   no_log: true
-  when: git_user_email is defined
+  when: git_user_email | default('') | length > 0
 
 - name: "Git | Set user.name"
   community.general.git_config:
@@ -104,9 +109,16 @@
     scope: global
     value: "{{ git_user_name }}"
 
+- name: "Git | Detect SSH signing key"
+  ansible.builtin.stat:
+    path: "{{ ansible_facts['user_dir'] }}/.ssh/id_ed25519.pub"
+  register: git_signing_key
+
 # SSH commit signing (toggle with git_signing_enabled: false in overrides)
 - name: "Git | Configure SSH signing"
-  when: git_signing_enabled | default(true)
+  when:
+    - git_signing_enabled | default(true)
+    - git_signing_key.stat.exists
   block:
     - name: "Git | Set user.signingkey"
       community.general.git_config:
@@ -144,7 +156,7 @@
       changed_when: false
       failed_when: false
       no_log: true
-      when: op_installed
+      when: op_authenticated | default(false)
 
     - name: "1Password | Configure ~/.config/git/allowed_signers"
       ansible.builtin.blockinfile:
@@ -154,14 +166,27 @@
         create: true
       no_log: true
       when:
-        - op_installed
+        - op_authenticated | default(false)
         - op_git_ssh_allowed_signers.rc == 0
 
-    - name: "Git | Set gpg.ssh.allowedSignersFile"
-      community.general.git_config:
-        name: gpg.ssh.allowedSignersFile
-        scope: global
-        value: "{{ ansible_facts['user_dir'] }}/.config/git/allowed_signers"
+- name: "Git | Detect allowed_signers file"
+  ansible.builtin.stat:
+    path: "{{ ansible_facts['user_dir'] }}/.config/git/allowed_signers"
+  register: git_allowed_signers_file
+
+- name: "Git | Set gpg.ssh.allowedSignersFile"
+  community.general.git_config:
+    name: gpg.ssh.allowedSignersFile
+    scope: global
+    value: "{{ ansible_facts['user_dir'] }}/.config/git/allowed_signers"
+  when: git_allowed_signers_file.stat.exists
+
+- name: "Git | Warn when SSH signing key is unavailable"
+  ansible.builtin.debug:
+    msg: "Git SSH signing skipped for now because ~/.ssh/id_ed25519.pub is not present. Unlock 1Password and rerun dotfiles -t 1password,ssh,git."
+  when:
+    - git_signing_enabled | default(true)
+    - not git_signing_key.stat.exists
 
 - name: "Git | Set undo alias"
   community.general.git_config:

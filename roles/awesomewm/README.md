@@ -11,7 +11,7 @@ This role provides a fully-configured AwesomeWM desktop environment with:
 - **Intelligent app positioning** with multi-resolution support
 - **Catppuccin Mocha theme** across all UI components
 - **Standalone settings tools** (no GNOME dependencies)
-- **Complete desktop utilities** (launcher, clipboard, screenshots, notifications)
+- **Complete desktop utilities** (Vicinae launcher hooks, screenshots, notifications)
 
 Perfect for developers migrating from macOS Hammerspoon or seeking advanced tiling functionality on Ubuntu.
 
@@ -50,19 +50,23 @@ graph TD
 - Pre-configured layouts for different workflows
 - Assign apps to specific cells
 - Optional auto-launch on layout activation
-- Interactive layout picker (Hyper+p)
+- Keyboard-native layout picker (Hyper+p)
 
 ### Modal Application Summoning
 
 | Keyboard Type | Summon Modal | Macro Modal |
 |---------------|--------------|-------------|
 | Laptop (no F13) | CapsLock | Double-tap CapsLock (150ms) |
-| External (with F13/F16) | F13 | F16 |
+| External (with F13/F16) | F13 | F16 or double-tap the same summon key |
+
+Some keyboards expose the summon key as `XF86Tools` or raw keycode `#191` instead of literal `F13`.
+AwesomeWM now treats those aliases as the same leader key for both summon activation and double-tap macro entry.
 
 **Default Summon Keys:**
 - `t` → Ghostty Terminal
 - `b` → Brave Browser
 - `d` → Discord
+- `Shift+c` → Signal
 - `s` → Spotify
 - `n` → Obsidian
 - `o` → 1Password
@@ -78,6 +82,7 @@ graph TD
 - `Hyper + p` → Layout picker
 - `Hyper + ;` → Cycle to next layout
 - `Hyper + u` → Bind focused window to cell
+- `Super/Command + u` → Bind focused window to cell directly
 
 ### Complete Desktop Environment
 
@@ -87,14 +92,14 @@ graph LR
     A --> C[Status Bar]
     A --> D[Notifications]
 
-    E[Utilities] --> F[Rofi Launcher]
-    E --> G[CopyQ Clipboard]
+    E[Utilities] --> F[Vicinae Launcher Signals]
+    E --> G[Vicinae Clipboard/Emoji]
     E --> H[Flameshot Screenshots]
     E --> I[Settings Tools]
 
     J[Theme] --> K[Catppuccin Mocha]
     K --> L[GTK Apps]
-    K --> M[Rofi]
+    K --> M[Fabric]
     K --> N[Status Bar]
 
     style A fill:#89b4fa
@@ -109,21 +114,19 @@ graph LR
 **Window Management:**
 - `awesome` - AwesomeWM window manager
 - `xdotool` - Window manipulation tool
-- `rofi` - Application launcher and layout picker
 - `i3lock` - Screen locker
 
 **Desktop Utilities:**
 - `flameshot` - Screenshot tool
-- `copyq` - Clipboard manager
 - `thunar` - Lightweight file manager
 - `ristretto` - Image viewer
-- `rofimoji` - Emoji picker (via pipx)
-- Flare launcher (AppImage)
+- Vicinae launcher hooks for command search, clipboard, app search, emoji, and
+  settings support when the separate `vicinae` role is installed
 
 **Media & System:**
 - `playerctl` - Media key controls
 - `brightnessctl` - Brightness control
-- `pulseaudio-utils` - Audio controls
+- `pulseaudio-utils` - Audio controls via `pactl`
 
 **Settings Tools (No GNOME):**
 - `pavucontrol` - Audio/mic/speaker settings
@@ -174,10 +177,6 @@ graph LR
 ├── awesome-wm-widgets/             # Cloned from GitHub
 └── cyclefocus/                     # Cloned from GitHub
 
-~/.config/rofi/
-├── config.rasi                     # Rofi configuration
-└── catppuccin-mocha.rasi          # Catppuccin theme
-
 ~/.config/gtk-3.0/
 └── settings.ini                    # GTK3 dark theme
 
@@ -189,16 +188,9 @@ graph LR
 ~/.config/flameshot/
 └── flameshot.ini                   # Screenshot tool config
 
-~/.config/copyq/
-├── copyq.conf                      # Clipboard manager config
-└── copyq-commands.ini              # Custom commands
-
 ~/.themes/
 └── catppuccin-mocha-blue-standard+default/  # GTK theme
 
-~/.local/bin/
-├── flare                           # Application launcher
-└── rofimoji                        # Emoji picker
 ```
 
 ### Theming
@@ -206,7 +198,6 @@ graph LR
 **Catppuccin Mocha** applied consistently across:
 - AwesomeWM (status bar, window borders, notifications)
 - GTK3/GTK4 applications
-- Rofi launcher
 - Papirus-Dark icon theme
 
 **Theme Colors:**
@@ -280,6 +271,15 @@ Hyper + l
    },
    ```
 
+   Shifted summon keys are supported by using uppercase letters:
+   ```lua
+   Signal = {
+     class = "signal",
+     summon = "C",       -- CapsLock/F13 + Shift+c
+     exec = "signal-desktop",
+   },
+   ```
+
 3. **Reload AwesomeWM:** Super + Ctrl + r
 
 #### Create a Custom Layout
@@ -299,6 +299,29 @@ Edit `~/.config/awesome/cell-management/layouts.lua`:
   },
 },
 ```
+
+#### Set a Layout Per Monitor
+
+Edit `~/.config/awesome/cell-management/config.lua`:
+
+```lua
+M.screen_layouts = {
+  ["DP-1"] = "4K Workspace",   -- Preferred: XRandR output name
+  ["HDMI-1"] = "HD Workspace",
+  ["screen:2"] = "Fullscreen", -- Fallback if output names are unstable
+  primary = "4K Workspace",    -- Optional default for the primary screen
+}
+
+M.systray_screen = "DP-1"      -- Optional systray target; defaults to "primary"
+```
+
+Notes:
+- Output-name keys are matched before `primary` and `screen:<index>`.
+- If no explicit mapping matches, Awesome falls back to resolution-based selection.
+- The systray target accepts the same output-name / `screen:<index>` style and falls back to the current primary screen if the configured target is unavailable.
+- `Hyper + p` and `Hyper + ;` now operate on the focused monitor only.
+- `Super + o` and `Super + Shift + o` move the focused client between monitors and re-snap it using the target monitor's active layout.
+- Use `xrandr --query` to find output names such as `DP-1`, `HDMI-1`, or `eDP-1`.
 
 #### Define Custom Cells
 
@@ -338,9 +361,9 @@ custom = {
 | Hyper + `j` | Focus window down |
 | Hyper + `k` | Focus window up |
 | Hyper + `l` | Focus window right |
-| Hyper + `p` | Open layout picker |
-| Hyper + `;` | Cycle to next layout |
-| Hyper + `u` | Bind window to cell |
+| Hyper + `p` | Open layout picker for focused monitor |
+| Hyper + `;` | Cycle layout on focused monitor |
+| Hyper + `u` | Bind window to a cell on its current monitor |
 
 ### Standard AwesomeWM
 
@@ -350,6 +373,8 @@ custom = {
 | Super + `r` | Run prompt |
 | Super + Ctrl + `r` | Reload AwesomeWM |
 | Super + Shift + `q` | Quit AwesomeWM |
+| Super + `o` | Move window to next monitor and snap to that monitor's layout |
+| Super + Shift + `o` | Move window to previous monitor and snap to that monitor's layout |
 | Super + `1-9` | Switch to workspace 1-9 |
 | Super + Shift + `1-9` | Move window to workspace |
 
@@ -363,12 +388,13 @@ None. This role is self-contained.
 
 **Automatically installed:**
 - Flatpak (for Discord, Spotify, Obsidian)
-- Python 3 + pipx (for rofimoji)
-- Git (for cloning widget repositories)
+- Desktop utility packages listed above
 
 **Not installed by this role:**
 - Ghostty terminal (install via [ghostty](../ghostty/) role)
 - 1Password (install via [1password](../1password/) role)
+- Vicinae launcher binary (install via [vicinae](../vicinae/) role)
+- Git client, which is required by the widget repository clone tasks
 
 ## Troubleshooting
 
@@ -452,7 +478,7 @@ M.hyper = { 'Mod4', 'Shift' }  -- Super+Shift (easier)
 
 **Complete removal:**
 ```bash
-sudo apt remove awesome xdotool flameshot rofi i3lock copyq
+sudo apt remove awesome xdotool flameshot i3lock
 rm -rf ~/.config/awesome
 rm -rf ~/.themes/catppuccin-mocha-*
 ```
@@ -510,10 +536,9 @@ sequenceDiagram
 ## Known Limitations
 
 **Version 1 Constraints:**
-- No layout persistence (state resets on restart)
+- Runtime layout picks are not persisted unless configured in `config.lua`
 - No visual modal feedback
 - No cell overlay for manual positioning
-- Single monitor only
 - Fixed 80x40 grid (not runtime configurable)
 - First window only (multi-window apps not fully supported)
 
@@ -521,7 +546,6 @@ sequenceDiagram
 
 ### Internal Documentation
 
-- **CLAUDE.md:** [roles/awesomewm/CLAUDE.md](CLAUDE.md)
 - **Hammerspoon Role:** [roles/hammerspoon](../hammerspoon/) (macOS inspiration)
 
 ### External Resources
@@ -539,7 +563,7 @@ When modifying this role:
 1. Test on Ubuntu 22.04+ before committing
 2. Verify configuration syntax: `awesome -k ~/.config/awesome/rc.lua`
 3. Document new features in this README
-4. Update CLAUDE.md with implementation details
+4. Document non-obvious landmines in the README only when they cannot be enforced in code
 5. Follow [conventional commit](https://www.conventionalcommits.org/) format
 
 ## License

@@ -4,12 +4,12 @@ return {
     summon = 'a', -- [A]genda or Granol[A]
   },
   Browser     = {
-    id = 'com.brave.Browser',
+    id = 'app.zen-browser.zen',
     summon = 'b', -- [B]rowser
   },
-  MatterMost  = {
-    id = 'Mattermost.Desktop',
-    summon = 'c', -- [C]hat
+  Signal      = {
+    id = 'org.whispersystems.signal-desktop',
+    summon = 'C', -- Signal chat
   },
   Discord     = {
     id = 'com.hnc.Discord',
@@ -23,9 +23,10 @@ return {
     id = 'com.apple.finder',
     summon = 'f', -- [F]inder
   },
-  Claude      = {
-    id = 'com.anthropic.claudefordesktop',
-    summon = 'g', -- [G]enAI (was GPT)
+  ChatGPT     = {
+    id = 'com.openai.codex',
+    launchOnly = true,
+    summon = 'g', -- [G]enAI / ChatGPT
   },
   ScreenSharing = {
     id = 'com.apple.ScreenSharing',
@@ -45,14 +46,15 @@ return {
   },
   Teams       = {
     id = 'com.microsoft.teams2',
+    launchOnly = true,
     summon = 'm', -- [M]eetings
   },
   Terminal    = {
     id = 'com.mitchellh.ghostty',
     summon = 't', -- [T]erminal
   },
-  Windows     = {
-    id = 'Windows App',
-    summon = 'w', -- [W]indows RDP
+  WorkSpaces  = {
+    id = 'com.amazon.workspaces',
+    summon = 'w', -- AWS [W]orkSpaces
   }
 }

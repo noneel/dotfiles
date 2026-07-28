@@ -4,20 +4,21 @@ Modern GPU-accelerated terminal emulator configuration with custom shaders, them
 
 ## Overview
 
-This Ansible role installs and configures [Ghostty](https://ghostty.org) - a fast, native, GPU-accelerated terminal emulator written in Zig by Mitchell Hashimoto. The configuration includes custom GLSL cursor shaders, background images, and the Catppuccin Mocha theme for a visually stunning development environment.
+This Ansible role installs and configures [Ghostty](https://ghostty.org) - a fast, native, GPU-accelerated terminal emulator written in Zig by Mitchell Hashimoto. The configuration includes custom GLSL cursor shaders, background images, and the Catppuccin Mocha theme for a visually polished development environment.
 
 ## Supported Platforms
 
-| Platform | Status | Installation Method |
-|----------|--------|---------------------|
-| macOS | ✅ Full Support | Homebrew Cask (`ghostty@tip`) |
-| Linux | 🚧 Architecture Ready | Not yet implemented |
-| Windows | 🚧 Architecture Ready | Not yet implemented |
+| Platform          | Status | Installation Method |
+|-------------------|--------|---------------------|
+| macOS             | ✅ Full Support | Homebrew Cask (`ghostty@tip`) |
+| Archlinux/CachyOS | ✅ Full Support | pacman (`ghostty`) |
+| Windows           | 🚧 Architecture Ready | Not yet implemented |
 
 ## What Gets Installed
 
 ### Packages
-- **Ghostty nightly** (`ghostty@tip`) - Latest features including background image support
+- **macOS:** Ghostty nightly (`ghostty@tip`) via Homebrew Cask
+- **Archlinux/CachyOS:** Ghostty (`ghostty`) via pacman
 
 ### Configuration Files
 
@@ -25,23 +26,21 @@ This Ansible role installs and configures [Ghostty](https://ghostty.org) - a fas
 ~/.config/ghostty/
 ├── config                      # Main configuration
 ├── shaders/
-│   ├── cursor_blaze.glsl      # Electric cyan trail effect
-│   └── cursor_smear.glsl      # Smooth sapphire trail effect
+│   └── cursor_blaze.glsl       # Deep Catppuccin mauve trail effect
 └── themes/
-    └── catppuccin-mocha       # Color palette
+    └── catppuccin-mocha        # Color palette
 ```
 
 ## Key Features
 
 ### 🎨 Visual Effects
 - **Custom Cursor Shaders**: GPU-powered cursor trail effects
-  - `cursor_blaze.glsl` - Electric cyan trail with motion blur (200ms)
-  - `cursor_smear.glsl` - Smooth sapphire trail (120ms)
+  - `cursor_blaze.glsl` - Deep Catppuccin mauve trail with motion blur (200ms)
 - **Background Images**: Custom backgrounds with opacity and blur support
 - **Catppuccin Mocha Theme**: Professional dark color scheme
 
 ### ⚡ Performance
-- **GPU Acceleration**: Metal rendering on macOS for smooth 60+ FPS
+- **GPU Acceleration**: Native Ghostty rendering on supported platforms for smooth 60+ FPS
 - **Font Rendering**: Enhanced typography with BerkeleyMono Nerd Font
 - **Optimized Shaders**: Branch-free GLSL for minimal performance impact
 
@@ -57,7 +56,7 @@ background-image = ~/Pictures/your-image.jpg
 background-image-opacity = 0.15
 
 # Typography
-font-size = 15
+font-size = 11
 font-family = "BerkeleyMono Nerd Font"
 font-thicken = true
 
@@ -70,12 +69,14 @@ window-padding-y = 10
 # Cursor Effects
 cursor-style = block
 cursor-style-blink = true
+cursor-invert-fg-bg = true
 custom-shader = shaders/cursor_blaze.glsl
 
 # Productivity
 clipboard-read = allow
 clipboard-write = allow
 copy-on-select = true
+shell-integration-features = no-cursor
 auto-update = check
 auto-update-channel = tip
 ```
@@ -86,9 +87,10 @@ auto-update-channel = tip
 graph TD
     A[Role Entry Point] --> B{OS Detection}
     B -->|macOS| C[Install ghostty@tip]
-    B -->|Linux| D[Not Implemented]
+    B -->|Archlinux/CachyOS| D[Install ghostty via pacman]
     B -->|Windows| E[Not Implemented]
     C --> F[Create ~/.config/ghostty]
+    D --> F
     F --> G[Deploy config file]
     F --> H[Deploy shaders/]
     F --> I[Deploy themes/]
@@ -96,22 +98,6 @@ graph TD
     H --> J
     I --> J
 ```
-
-## Shader Technology
-
-Both custom shaders use **Signed Distance Fields (SDF)** for precise geometric calculations and are based on [Inigo Quilez's distance functions](https://iquilezles.org/articles/distfunctions2d/).
-
-### Cursor Blaze
-- Electric cyan color scheme (`#00E0FF`)
-- Parallelogram trail between cursor positions
-- Distance-based opacity fade
-- 200ms duration with easing functions
-
-### Cursor Smear
-- Catppuccin Sapphire blue (`#74c7ed`)
-- 12+ color variants available (commented)
-- 120ms duration for snappier feel
-- Optimized for better performance
 
 ## Usage
 
@@ -131,9 +117,8 @@ dotfiles -t ghostty --check
 
 Edit `~/.config/ghostty/config`:
 ```ini
-# Switch between effects
-custom-shader = shaders/cursor_blaze.glsl   # Electric trail
-custom-shader = shaders/cursor_smear.glsl   # Smooth trail
+# Active cursor shader
+custom-shader = shaders/cursor_blaze.glsl   # Deep Catppuccin mauve trail
 # custom-shader =                           # Disable effects
 ```
 
@@ -149,20 +134,21 @@ background-image-fit = cover               # cover, contain, stretch, tile
 
 ### Required
 - **macOS**: Homebrew installed
+- **Archlinux/CachyOS**: pacman package installation available
 - **Font**: BerkeleyMono Nerd Font (or modify `font-family` in config)
 
 ### Optional
 - Background image at configured path
-- GPU with Metal support for shader effects
+- GPU support for shader effects
 
 ## Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
 | Background image not loading | Verify file path exists, use absolute path |
-| Shader effects not working | Update to nightly (`ghostty@tip`), check GPU support |
-| Font rendering issues | Install BerkeleyMono Nerd Font via Homebrew |
-| Performance problems | Disable custom shaders, reduce blur radius |
+| Shader effects not working | Update Ghostty, verify `custom-shader` points at `shaders/cursor_blaze.glsl`, and check GPU support |
+| Font rendering issues | Install BerkeleyMono Nerd Font or update `font-family` |
+| Performance problems | Disable custom shaders, reduce blur radius, or lower background-image opacity |
 
 ## Links
 
@@ -173,4 +159,4 @@ background-image-fit = cover               # cover, contain, stretch, tile
 
 ## Advanced Configuration
 
-For detailed customization options, shader development, and platform-specific notes, see [CLAUDE.md](./CLAUDE.md).
+For detailed customization options and platform-specific notes, use the upstream Ghostty docs plus this README.

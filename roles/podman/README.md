@@ -118,6 +118,74 @@ podman machine start
 open /Applications/Podman\ Desktop.app
 ```
 
+## 🧠 Machine Profiles On macOS
+
+This role installs Podman, but it does not create or resize Podman machines for you.
+
+That separation is intentional:
+
+- Machine resource sizing is host-specific
+- Podman on macOS requires a Linux VM
+- Only one Podman-managed VM can be active at a time
+- Homebrew Podman on macOS can otherwise create `libkrun` machines that require an unavailable `krunkit` backend binary
+
+The recommended pattern is to keep a small set of named machines per host and switch between them from your shell.
+
+The ZSH role now ships helper functions built around two profile names:
+
+- `podman-low`
+- `podman-high`
+
+Manual creation flow for custom resources on macOS:
+
+```bash
+# Low-spec machine for lighter workflows
+podman machine init --provider applehv --cpus 4 --memory 8192 --disk-size 120 podman-low
+
+# High-spec machine for heavier builds or local clusters
+podman machine init --provider applehv --cpus 8 --memory 32768 --disk-size 300 podman-high
+```
+
+You can pick different resource values on each host. The shell helpers only care about the names.
+
+Available helper commands:
+
+```bash
+p.setup    # create missing podman-low/podman-high machines; macOS defaults to applehv
+p.low      # stop other running machines, start podman-low, switch default connection
+p.high     # stop other running machines, start podman-high, switch default connection
+p.use foo  # switch to any existing machine name, stopping other running machines first
+p.off      # stop the running machine
+p.stop     # stop every running machine
+p.current  # show current machine, resources, and active connection
+p.status   # show machine list plus current selection
+p.help     # show available Podman helper commands
+```
+
+If you want different profile names, override these environment variables before sourcing the helpers:
+
+```bash
+export PODMAN_MACHINE_LOW_NAME=my-low
+export PODMAN_MACHINE_HIGH_NAME=my-high
+```
+
+Provider selection only applies to machines that `p.setup` creates. Existing machines are never modified. For new machines, the helper uses this provider order:
+
+1. `PODMAN_MACHINE_PROVIDER`
+2. `CONTAINERS_MACHINE_PROVIDER`
+3. `applehv` on macOS/Darwin
+4. Podman's default provider elsewhere
+
+Recommended first-use flow:
+
+```bash
+p.setup
+```
+
+That command is idempotent. It only creates missing machines. On macOS it initializes new machines with `applehv` by default so Homebrew Podman does not create unusable `libkrun` machines that fail later because `krunkit` is missing. If you want another provider, set `PODMAN_MACHINE_PROVIDER` or `CONTAINERS_MACHINE_PROVIDER` before running `p.setup`; `libkrun` on macOS requires `krunkit`, and the helper will fail fast when that backend is requested without the binary.
+
+If you want larger resources or a different provider for an existing profile, keep the same names and recreate those machines manually with the CPU, memory, disk, and provider values you want. Recreating machines is destructive: the images, containers, and volumes stored inside those Podman VMs are removed with them.
+
 ## 🏗️ Role Structure
 
 ```

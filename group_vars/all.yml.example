@@ -14,6 +14,12 @@
 # For more examples, see: docs/EXAMPLES.md
 # ====================================================================
 
+# Arch/CachyOS pacman defaults. CachyOS mirrors can occasionally stall on large
+# packages; this keeps package installs from failing due curl's low-speed timer.
+arch_pacman_extra_args: "--disable-download-timeout"
+arch_pacman_update_cache_extra_args: "--disable-download-timeout"
+arch_pacman_upgrade_extra_args: "--disable-download-timeout"
+
 # --------------------------------------------------------------------
 # ROLES CONFIGURATION
 # --------------------------------------------------------------------
@@ -58,6 +64,7 @@ default_roles:
   # - helm         # Kubernetes package manager
   # - k8s          # Kubernetes command-line tools
   # - k9s          # Kubernetes cluster management UI
+  # - lfk          # Fast Kubernetes terminal UI alternative to k9s
   
   # === GitHub Integration ===
   - gh             # GitHub CLI for repo management
@@ -72,6 +79,7 @@ default_roles:
   # === Terminal Emulators ===
   # - kitty        # GPU-accelerated terminal
   # - warp         # Modern terminal with AI features
+  # - herdr        # Terminal workspace for parallel coding agents
   
   # === Productivity Tools ===
   # - obsidian     # Knowledge management and note-taking
@@ -83,6 +91,7 @@ default_roles:
   
   # === Communication & Media ===
   # - discord      # Team communication
+  # - signal       # Private messaging
   # - spotify      # Music streaming
   
   # === Network & Remote Access ===
@@ -94,6 +103,11 @@ default_roles:
   # - aldente      # Battery charge limiter for macOS
   
   # === Linux Specific ===
+  # - awesomewm     # X11 window manager and keyboard-driven desktop
+  # - plasma        # KDE Plasma Wayland desktop and KWin summon workflow
+  # - steam         # Steam/Proton/Gamescope support for Arch/CachyOS
+  # - vicinae       # Raycast-style launcher for Linux/AwesomeWM
+  # - fabric        # AwesomeWM top command deck UI
   # - flatpak      # Universal Linux package manager
   # - nala         # Better apt frontend for Ubuntu/Debian
   
@@ -143,6 +157,25 @@ default_roles:
   # === Network Analysis ===
   # - tshark       # Command-line network protocol analyzer
 
+
+# Optional per-distribution defaults pruning. Explicit `--tags role` still runs
+# a role; this only keeps `dotfiles`/`--tags all` from pulling irrelevant stacks.
+exclude_roles_by_distribution:
+  Archlinux:
+    - asciiquarium
+    - bash
+    - aldente
+    - awesomewm
+    - borders
+    - hammerspoon
+    - nala
+    - raycast
+    - slides
+    - superwhisper
+    - vicinae
+    - flatpak
+    - starship
+
 # --------------------------------------------------------------------
 # USER CONFIGURATION
 # --------------------------------------------------------------------
@@ -150,6 +183,16 @@ default_roles:
 # REQUIRED: Your name for git commits and configurations
 # This will be used for git config user.name
 git_user_name: "Your Full Name"
+
+# Optional keyboard layout for Linux system/X11 paths. Plasma desktop keyboard
+# preferences live in `roles/plasma/defaults/main.yml`.
+#
+# keyboard:
+#   model: pc105
+#   layout: us
+#   variant: dvorak
+#   options:
+#     - caps:none
 
 # --------------------------------------------------------------------
 # 1PASSWORD INTEGRATION (Optional but Recommended)
@@ -260,7 +303,7 @@ git_user_name: "Your Full Name"
 # 
 # Minimal: system, git, zsh, neovim, tmux, fzf, bat, lsd, starship, fonts
 # Web Dev: Add nvm, npm, python, docker, gh, lazygit
-# DevOps: Add terraform, helm, k8s, k9s, btop, taskfile
+# DevOps: Add terraform, helm, k8s, k9s, lfk, btop, taskfile
 # Full:    Enable most/all roles for complete development environment
 
 # --------------------------------------------------------------------

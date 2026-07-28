@@ -15,6 +15,11 @@ roles/claude/files/commands/raft/
 roles/claude/files/skills/rafty
 roles/claude/files/commands/raft-*.md
 roles/claude/files/agents/raft-*.md
+roles/claude/files/hooks/peon-ping/
+roles/claude/files/skills/peon-ping-*/
+
+# Herdr-managed Claude integration artifacts
+roles/claude/files/hooks/herdr-agent-state.sh
 
 # Crush directory
 .crush/
@@ -24,6 +29,7 @@ roles/claude/files/agents/raft-*.md
 
 # Ansible cache/runtime directories
 .ansible/
+.omp/
 
 # Logs
 logs
@@ -48,3 +54,7 @@ node_modules/
 
 # Task files
 tasks.json
+
+# Superpowers local state
+.superpowers/
+docs/superpowers/
