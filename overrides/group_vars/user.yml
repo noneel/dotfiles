@@ -10,6 +10,11 @@ ssh_deploy_keys_enabled: false
 # Git: Disable SSH commit signing (requires 1Password + SSH keys)
 git_signing_enabled: false
 
+# Roles: Exclude from default runs
+exclude_roles:
+  - awesomewm
+  - vicinae
+
 # Roles: Custom selection (overrides default_roles)
 default_roles:
   - system
