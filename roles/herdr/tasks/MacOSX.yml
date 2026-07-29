@@ -3,3 +3,8 @@
   community.general.homebrew:
     name: herdr
     state: present
+
+- name: "Herdr | MacOSX | Install Rust for Herdr plugins"
+  community.general.homebrew:
+    name: rust
+    state: present

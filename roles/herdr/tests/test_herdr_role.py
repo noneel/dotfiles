@@ -111,6 +111,27 @@ class HerdrRoleTests(unittest.TestCase):
             if "override_utils/tasks/set_config_source.yml" in task
         )
         copy = self._task_with_action(self.main_tasks, "ansible.builtin.copy")
+        command_tasks = [
+            task
+            for task in self.main_tasks
+            if re.search(r"(?m)^  ansible\.builtin\.command:", task)
+        ]
+        navigator_check = next(
+            task
+            for task in command_tasks
+            if "plugin action list --plugin willfish.herdr-navigator" in task
+        )
+        navigator_install = next(
+            task
+            for task in command_tasks
+            if "plugin install willfish/herdr-navigator" in task
+        )
+        navigator_manifest_find = self._task_with_action(
+            self.main_tasks, "ansible.builtin.find"
+        )
+        navigator_manifest_replace = self._task_with_action(
+            self.main_tasks, "ansible.builtin.replace"
+        )
 
         self.assertEqual(len(include_tasks), 2)
         self.assertIn(
@@ -129,14 +150,30 @@ class HerdrRoleTests(unittest.TestCase):
         )
         self.assertIn('    src: "{{ _files_path }}/config.toml"', copy)
         self.assertIn('    mode: "0644"', copy)
+        self.assertIn("  changed_when: false", navigator_check)
+        self.assertIn("  failed_when: false", navigator_check)
+        self.assertIn("  failed_when: false", navigator_install)
+        self.assertIn("  when: herdr_navigator_plugin_check.rc != 0", navigator_install)
+        self.assertIn("    patterns: herdr-plugin.toml", navigator_manifest_find)
+        self.assertIn("  failed_when: false", navigator_manifest_find)
+        self.assertIn("    regexp: '\"alt\\+([hjkl])\"'", navigator_manifest_replace)
+        self.assertIn("    replace: '\"ctrl+\\1\"'", navigator_manifest_replace)
+        self.assertIn("  when: \"'willfish.herdr-navigator-' in item.path\"", navigator_manifest_replace)
 
     def test_macos_installs_stable_homebrew_formula(self) -> None:
         tasks = load_task_blocks(TASKS_ROOT / "MacOSX.yml")
-        install = self._task_with_action(tasks, "community.general.homebrew")
+        installs = [
+            task
+            for task in tasks
+            if re.search(r"(?m)^  community\.general\.homebrew:", task)
+        ]
 
-        self.assertIn("  community.general.homebrew:", install)
-        self.assertIn("    name: herdr", install)
-        self.assertIn("    state: present", install)
+        self.assertEqual(len(installs), 2)
+        self.assertTrue(any("    name: herdr" in task for task in installs))
+        self.assertTrue(any("    name: rust" in task for task in installs))
+        for install in installs:
+            self.assertIn("  community.general.homebrew:", install)
+            self.assertIn("    state: present", install)
 
     def test_supported_linux_distributions_use_shared_release_installer(self) -> None:
         for distribution in ("Archlinux", "Fedora", "Ubuntu", "Debian"):
