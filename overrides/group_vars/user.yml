@@ -13,6 +13,9 @@ git_signing_enabled: false
 # Roles: Exclude from default runs
 exclude_roles:
   - awesomewm
+  - bats
+  - omp
+  - tldr
   - vicinae
 
 # Roles: Custom selection (overrides default_roles)
