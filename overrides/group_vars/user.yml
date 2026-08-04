@@ -10,6 +10,9 @@ ssh_deploy_keys_enabled: false
 # Git: Disable SSH commit signing (requires 1Password + SSH keys)
 git_signing_enabled: false
 
+# Herdr: Enable Vim-style pane navigation plugin
+herdr_navigator_plugin_enabled: true
+
 # Roles: Exclude from default runs
 exclude_roles:
   - awesomewm
@@ -59,7 +62,7 @@ default_roles:
   - python
   # - raycast
   # - ruby
-  # - rust
+  - rust
   # - slides
   # - spotify
   # - ssh

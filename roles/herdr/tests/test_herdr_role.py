@@ -9,7 +9,9 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[3]
 ROLE_ROOT = REPO_ROOT / "roles" / "herdr"
 TASKS_ROOT = ROLE_ROOT / "tasks"
+HANDLERS_ROOT = ROLE_ROOT / "handlers"
 GROUP_VARS_ROOT = REPO_ROOT / "group_vars"
+USER_OVERRIDES_ROOT = REPO_ROOT / "overrides" / "group_vars"
 
 
 def load_task_blocks(path: Path) -> list[str]:
@@ -45,6 +47,7 @@ class HerdrRoleTests(unittest.TestCase):
             cls.config = tomllib.load(stream)
 
         cls.main_tasks = load_task_blocks(TASKS_ROOT / "main.yml")
+        cls.main_handlers = load_task_blocks(HANDLERS_ROOT / "main.yml")
         cls.release_tasks = load_task_blocks(
             TASKS_ROOT / "install_github_release.yml"
         )
@@ -52,6 +55,9 @@ class HerdrRoleTests(unittest.TestCase):
             encoding="utf-8"
         )
         cls.example_group_vars_text = (GROUP_VARS_ROOT / "all.yml.example").read_text(
+            encoding="utf-8"
+        )
+        cls.user_overrides_text = (USER_OVERRIDES_ROOT / "user.yml").read_text(
             encoding="utf-8"
         )
 
@@ -111,26 +117,10 @@ class HerdrRoleTests(unittest.TestCase):
             if "override_utils/tasks/set_config_source.yml" in task
         )
         copy = self._task_with_action(self.main_tasks, "ansible.builtin.copy")
-        command_tasks = [
+        navigator_block = next(
             task
             for task in self.main_tasks
-            if re.search(r"(?m)^  ansible\.builtin\.command:", task)
-        ]
-        navigator_check = next(
-            task
-            for task in command_tasks
-            if "plugin action list --plugin willfish.herdr-navigator" in task
-        )
-        navigator_install = next(
-            task
-            for task in command_tasks
-            if "plugin install willfish/herdr-navigator" in task
-        )
-        navigator_manifest_find = self._task_with_action(
-            self.main_tasks, "ansible.builtin.find"
-        )
-        navigator_manifest_replace = self._task_with_action(
-            self.main_tasks, "ansible.builtin.replace"
+            if '"Herdr | Configure navigator plugin"' in task
         )
 
         self.assertEqual(len(include_tasks), 2)
@@ -150,15 +140,36 @@ class HerdrRoleTests(unittest.TestCase):
         )
         self.assertIn('    src: "{{ _files_path }}/config.toml"', copy)
         self.assertIn('    mode: "0644"', copy)
-        self.assertIn("  changed_when: false", navigator_check)
-        self.assertIn("  failed_when: false", navigator_check)
-        self.assertIn("  failed_when: false", navigator_install)
-        self.assertIn("  when: herdr_navigator_plugin_check.rc != 0", navigator_install)
-        self.assertIn("    patterns: herdr-plugin.toml", navigator_manifest_find)
-        self.assertIn("  failed_when: false", navigator_manifest_find)
-        self.assertIn("    regexp: '\"alt\\+([hjkl])\"'", navigator_manifest_replace)
-        self.assertIn("    replace: '\"ctrl+\\1\"'", navigator_manifest_replace)
-        self.assertIn("  when: \"'willfish.herdr-navigator-' in item.path\"", navigator_manifest_replace)
+        self.assertIn(
+            "  when: herdr_navigator_plugin_enabled | default(false) | bool",
+            navigator_block,
+        )
+        self.assertIn(
+            "      ansible.builtin.command: herdr plugin action list --plugin willfish.herdr-navigator",
+            navigator_block,
+        )
+        self.assertIn("      changed_when: false", navigator_block)
+        self.assertIn("      failed_when: false", navigator_block)
+        self.assertIn(
+            "      ansible.builtin.command: herdr plugin install willfish/herdr-navigator -y",
+            navigator_block,
+        )
+        self.assertIn("      when: herdr_navigator_plugin_check.rc != 0", navigator_block)
+        self.assertIn("        patterns: herdr-plugin.toml", navigator_block)
+        self.assertIn("        regexp: '\"alt\\+([hjkl])\"'", navigator_block)
+        self.assertIn("        replace: '\"ctrl+\\1\"'", navigator_block)
+        self.assertIn("      when: \"'willfish.herdr-navigator-' in item.path\"", navigator_block)
+        self.assertIn("      notify: \"Herdr | Reload running server config\"", navigator_block)
+        self.assertIn("  notify: \"Herdr | Reload running server config\"", copy)
+
+    def test_config_changes_reload_running_server_softly(self) -> None:
+        handler = self._task_with_action(
+            self.main_handlers, "ansible.builtin.command"
+        )
+
+        self.assertIn("  ansible.builtin.command: herdr server reload-config", handler)
+        self.assertIn("  changed_when: false", handler)
+        self.assertIn("  failed_when: false", handler)
 
     def test_macos_installs_stable_homebrew_formula(self) -> None:
         tasks = load_task_blocks(TASKS_ROOT / "MacOSX.yml")
@@ -241,6 +252,17 @@ class HerdrRoleTests(unittest.TestCase):
         self.assertIn(
             "herdr",
             parse_top_level_list(self.current_group_vars_text, "default_roles"),
+        )
+        self.assertIn(
+            "rust",
+            parse_top_level_list(self.user_overrides_text, "default_roles"),
+        )
+        self.assertRegex(
+            self.user_overrides_text,
+            re.compile(
+                r"^herdr_navigator_plugin_enabled:\s*true\s*$",
+                re.MULTILINE,
+            ),
         )
         self.assertRegex(
             self.example_group_vars_text,

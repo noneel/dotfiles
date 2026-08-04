@@ -1,0 +1,5 @@
+---
+- name: "Herdr | Reload running server config"
+  ansible.builtin.command: herdr server reload-config
+  changed_when: false
+  failed_when: false

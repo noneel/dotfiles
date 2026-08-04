@@ -1,13 +1,15 @@
 ---
-- name: Rust | Install packages
+- name: Rust | Install rustup
   ansible.builtin.apt:
-    name: "{{ item }}"
+    name: rustup
     state: present
     update_cache: true
   become: true
-  loop:
-    - rustc
-    - cargo
+
+- name: Rust | Use stable toolchain
+  ansible.builtin.command: rustup default stable
+  register: rust_stable_toolchain
+  changed_when: "'unchanged' not in rust_stable_toolchain.stdout"
 
 # - name: Rust | Install LSD
 #   ansible.builtin.command: "cargo install lsd --locked"

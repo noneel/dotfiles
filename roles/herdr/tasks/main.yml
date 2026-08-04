@@ -19,46 +19,51 @@
     state: directory
     mode: "0755"
 
-- name: "Herdr | Check Herdr navigator plugin"
-  ansible.builtin.command: herdr plugin action list --plugin willfish.herdr-navigator
-  register: herdr_navigator_plugin_check
-  changed_when: false
-  failed_when: false
+- name: "Herdr | Configure navigator plugin"
+  when: herdr_navigator_plugin_enabled | default(false) | bool
+  block:
+    - name: "Herdr | Check Herdr navigator plugin"
+      ansible.builtin.command: herdr plugin action list --plugin willfish.herdr-navigator
+      register: herdr_navigator_plugin_check
+      changed_when: false
+      failed_when: false
 
-- name: "Herdr | Install Herdr navigator plugin"
-  ansible.builtin.command: herdr plugin install willfish/herdr-navigator -y
-  register: herdr_navigator_plugin_install
-  changed_when: herdr_navigator_plugin_install.rc == 0
-  failed_when: false
-  when: herdr_navigator_plugin_check.rc != 0
+    - name: "Herdr | Install Herdr navigator plugin"
+      ansible.builtin.command: herdr plugin install willfish/herdr-navigator -y
+      register: herdr_navigator_plugin_install
+      changed_when: herdr_navigator_plugin_install.rc == 0
+      failed_when: false
+      when: herdr_navigator_plugin_check.rc != 0
 
-- name: "Herdr | Warn when Herdr navigator plugin install fails"
-  ansible.builtin.debug:
-    msg:
-      - "Herdr navigator plugin was not installed."
-      - "{{ herdr_navigator_plugin_install.stderr | default(herdr_navigator_plugin_install.msg | default('unknown error')) }}"
-  when:
-    - herdr_navigator_plugin_install is defined
-    - herdr_navigator_plugin_install.rc | default(0) != 0
+    - name: "Herdr | Warn when Herdr navigator plugin install fails"
+      ansible.builtin.debug:
+        msg:
+          - "Herdr navigator plugin was not installed."
+          - "{{ herdr_navigator_plugin_install.stderr | default(herdr_navigator_plugin_install.msg | default('unknown error')) }}"
+      when:
+        - herdr_navigator_plugin_install is defined
+        - herdr_navigator_plugin_install.rc | default(0) != 0
 
-- name: "Herdr | Find Herdr navigator plugin manifests"
-  ansible.builtin.find:
-    paths: "{{ ansible_facts['user_dir'] }}/.config/herdr/plugins/github"
-    patterns: herdr-plugin.toml
-    recurse: true
-  register: herdr_navigator_plugin_manifests
-  failed_when: false
+    - name: "Herdr | Find Herdr navigator plugin manifests"
+      ansible.builtin.find:
+        paths: "{{ ansible_facts['user_dir'] }}/.config/herdr/plugins/github"
+        patterns: herdr-plugin.toml
+        recurse: true
+      register: herdr_navigator_plugin_manifests
+      failed_when: false
 
-- name: "Herdr | Use Ctrl for Herdr navigator plugin actions"
-  ansible.builtin.replace:
-    path: "{{ item.path }}"
-    regexp: '"alt\+([hjkl])"'
-    replace: '"ctrl+\1"'
-  loop: "{{ herdr_navigator_plugin_manifests.files | default([]) }}"
-  when: "'willfish.herdr-navigator-' in item.path"
+    - name: "Herdr | Use Ctrl for Herdr navigator plugin actions"
+      ansible.builtin.replace:
+        path: "{{ item.path }}"
+        regexp: '"alt\+([hjkl])"'
+        replace: '"ctrl+\1"'
+      loop: "{{ herdr_navigator_plugin_manifests.files | default([]) }}"
+      when: "'willfish.herdr-navigator-' in item.path"
+      notify: "Herdr | Reload running server config"
 
 - name: "Herdr | Copy config"
   ansible.builtin.copy:
     dest: "{{ ansible_facts['user_dir'] }}/.config/herdr/config.toml"
     src: "{{ _files_path }}/config.toml"
     mode: "0644"
+  notify: "Herdr | Reload running server config"

@@ -10,7 +10,7 @@ This role provides a minimal Rust installation optimized for different Linux dis
 
 | Platform | Method | Package |
 |----------|--------|---------|
-| Ubuntu | apt | `rustc`, `cargo` |
+| Ubuntu | apt + rustup | `rustup` with stable toolchain |
 | Arch Linux | pacman | `rustup` |
 
 > **Note**: macOS and Fedora support not currently implemented. Consider using [rustup.rs](https://rustup.rs/) directly on these platforms.
@@ -18,8 +18,8 @@ This role provides a minimal Rust installation optimized for different Linux dis
 ## What Gets Installed
 
 ### Ubuntu
-- **rustc** - The Rust compiler
-- **cargo** - Rust package manager and build tool
+- **rustup** - Official Rust toolchain installer and version manager
+  - Provides the stable `rustc` and `cargo` toolchain
 
 ### Arch Linux
 - **rustup** - Official Rust toolchain installer and version manager
@@ -127,7 +127,7 @@ Ensure your package cache is up to date:
 sudo apt update
 ```
 
-### Arch Linux: rustup not configuring default toolchain
+### rustup not configuring default toolchain
 After installation, initialize rustup:
 ```bash
 rustup default stable
